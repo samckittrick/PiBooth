@@ -7,113 +7,122 @@ elementFormDefault="qualified">
   <xs:annotation>
     <xs:documentation>XML Schema describing a photo booth template.</xs:documentation>
   </xs:annotation>
-
+  
   <!-- Root Element PhotoTemplate -->
   <xs:element name="PhotoTemplate">
     <xs:annotation>
       <xs:documentation>Root element for the photobooth template</xs:documentation>
     </xs:annotation>
     <xs:complexType>
+      <xs:all>
 
-      <!--Name Element-->
-      <xs:element name="name">
-	<xs:annotation>
-	  <xs:documentation>The name of the template. </xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:simpleContent>
-	    <xs:extension base="xs:string" />
-	  </xs:simpleContent>
-	</xs:complexType>
-      </xs:element>
+	<!--Name Element-->
+	<xs:element name="name">
+	  <xs:annotation>
+	    <xs:documentation>The name of the template. </xs:documentation>
+	  </xs:annotation>
+	  <xs:complexType>
+	    <xs:simpleContent>
+	      <xs:extension base="xs:string" />
+	    </xs:simpleContent>
+	  </xs:complexType>
+	</xs:element>
+	
+	<!--Description Element-->
+	<xs:element name="description" minOccurs="0">
+	  <xs:annotation>
+	    <xs:documentation>The a description of the template </xs:documentation>
+	  </xs:annotation>
+	  <xs:complexType>
+	    <xs:simpleContent>
+	      <xs:extension base="xs:string" />
+	    </xs:simpleContent>
+	  </xs:complexType>
+	</xs:element>
 
-      <!--Description Element-->
-      <xs:element name="description" minOccurs="0">
-	<xs:annotation>
-	  <xs:documentation>The a description of the template </xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:simpleContent>
-	    <xs:extension base="xs:string" />
-	  </xs:simpleContent>
-	</xs:complexType>
-      </xs:element>
+	<!--Author Element-->
+	<xs:element name="author" minOccurs="0">
+	  <xs:annotation>
+	    <xs:documentation>The name of the author of the template. </xs:documentation>
+	  </xs:annotation>
+	  <xs:complexType>
+	    <xs:simpleContent>
+	      <xs:extension base="xs:string" />
+	    </xs:simpleContent>
+	  </xs:complexType>
+	</xs:element>
+	
+	<!-- Preview Image Tag -->
+	<xs:element name="previewImage" minOccurs="0">
+	  <xs:annotation>
+	    <xs:documentation>Specifies an image to be used as a preview</xs:documentation>
+	  </xs:annotation>
+	  <xs:complexType>
+	    <xs:attribute name="src" type="xs:string" use="required" />
+	  </xs:complexType>
+	</xs:element>
 
-      <!--Author Element-->
-      <xs:element name="author" minOccurs="0">
-	<xs:annotation>
-	  <xs:documentation>The name of the author of the template. </xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:simpleContent>
-	    <xs:extension base="xs:string" />
-	  </xs:simpleContent>
-	</xs:complexType>
-      </xs:element>
+	<!-- Canvas Element -->
+	<xs:element name="canvas">
+	  <xs:annotation>
+	    <xs:documentation>Element representing the final image canvas</xs:documentation>
+	  </xs:annotation>
+	  <xs:complexType>
+	    <xs:all>
 
-      <!-- Preview Image Tag -->
-      <xs:element name="previewImage" minOccurs="0">
-	<xs:annotation>
-	  <xs:documentation>Specifies an image to be used as a preview</xs:documentation>
-	</xs:annotation>
-	<xs:attribute name="src" type="xs:string" use="mandatory" />
-      </xs:element>
-
-      <!-- Canvas Element -->
-      <xs:element name="canvas">
-	<xs:annotation>
-	  <xs:documentation>Element representing the final image canvas</xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:attribute name="height" type="xs:integer" use="mandatory" />
-	  <xs:attribute name="width" type="xs:integer" use="mandatory" />
-	  <xs:attribute name="backgroundColor" type="xs:string" use="optional" />
-
-	  <!-- BackgroundPhoto -->
-	  <xs:element name="backgroundPhoto" minOccurs="0">
-	    <xs:annotation>
-	      <xs:documentation>Specifiy the image to be used as a background image</xs:documentation>
-	    </xs:annotation>
-	    <xs:attribute name="src" type="xs:string" use="mandatory" />
-	  </xs:element>
-
-	  <!-- ForegroundPhoto -->
-	  <xs:element name="foregroundPhoto" minOccurs="0">
-	    <xs:annotation>
-	      <xs:documentation>Specifiy the image to be used as a background image</xs:documentation>
-	    </xs:annotation>
-	    <xs:attribute name="src" type="xs:string" use="mandatory" />
-	  </xs:element>
-
-	  <!-- Photo List -->
-	  <xs:element name="photos">
-	    <xs:annotation>
-	      <xs:documentation>List of the photos to take and the location to put them in. </xs:documentation>
-	    </xs:annotation>
-	    <xs:complexType>
-	      <!-- Photo list item -->
-	      <xs:element name="photoSpec">
+	      <!-- BackgroundPhoto -->
+	      <xs:element name="backgroundPhoto" minOccurs="0">
 		<xs:annotation>
-		  <xs:documentation>Specifications for each photo to be taken.This is an ordered list.</xs:documentation>
+		  <xs:documentation>Specifiy the image to be used as a background image</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
-		  <xs:attribute name="height" type="xs:integer" use="mandatory" />
-		  <xs:attribute name="width" type="xs:integer" use="mandatory" />
-		  <xs:attribute name="x" type="xs:integer" use="mandatory" />
-		  <xs:attribute name="y" type="xs:integer" use="mandatory" />
-		  <xs:attribute name="rotation" type="xs:integer" use="optional" />
+		  <xs:attribute name="src" type="xs:string" use="required" />
 		</xs:complexType>
-	      </xs:element> <!--PhotoSpec-->
-	    </xs:complexType>
-	  </xs:element><!--Photos-->
+	      </xs:element>
 
-	</xs:complexType>
-      </xs:element><!-- Canvas -->
+	      <!-- ForegroundPhoto -->
+	      <xs:element name="foregroundPhoto" minOccurs="0">
+		<xs:annotation>
+		  <xs:documentation>Specifiy the image to be used as a background image</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+		  <xs:attribute name="src" type="xs:string" use="required" />
+		</xs:complexType>
+	      </xs:element>
 
-	  
-      
+	      <!-- Photo List -->
+	      <xs:element name="photos">
+		<xs:annotation>
+		  <xs:documentation>List of the photos to take and the location to put them in. </xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+		  <xs:choice>
+		    <!-- Photo list item -->
+		    <xs:element name="photoSpec" minOccurs="1" maxOccurs="unbounded">
+		      <xs:annotation>
+			<xs:documentation>Specifications for each photo to be taken.This is an ordered list.</xs:documentation>
+		      </xs:annotation>
+		      <xs:complexType>
+			<xs:attribute name="height" type="xs:integer" use="required" />
+			<xs:attribute name="width" type="xs:integer" use="required" />
+			<xs:attribute name="x" type="xs:integer" use="required" />
+			<xs:attribute name="y" type="xs:integer" use="required" />
+			<xs:attribute name="rotation" type="xs:integer" use="optional" />
+		      </xs:complexType>
+		    </xs:element> <!--PhotoSpec-->
+		  </xs:choice>
+		</xs:complexType>
+	      </xs:element><!--Photos-->
+
+	    </xs:all>
+	    <xs:attribute name="height" type="xs:integer" use="required" />
+	    <xs:attribute name="width" type="xs:integer" use="required" />
+	    <xs:attribute name="backgroundColor" type="xs:string" use="optional" />
+	  </xs:complexType>
+	</xs:element><!-- Canvas -->
+
+      </xs:all>
     </xs:complexType>
   </xs:element> <!-- PhotoTemplate -->
-
 
 </xs:schema>

@@ -1,4 +1,8 @@
-<PhotoTemplate>
+<?xml version="1.0" ?>
+
+<PhotoTemplate 
+	xmlns="http://www.scottmckittrick.com/schema/PiBooth/PhotoTemplate"
+	>
   <name>Test Template</name>
   <description>Test template for python photo booth</description>
   <!-- Preview Image-->
