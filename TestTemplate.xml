@@ -1,0 +1,19 @@
+<PhotoTemplate>
+  <name>Test Template</name>
+  <description>Test template for python photo booth</description>
+  <!-- Preview Image-->
+  <previewImage src="image.jpg" />
+
+  <canvas height="150" width="150" backgroundColor="#FFFFFF">
+    <backgroundPhoto src="src.jpg" />
+
+    <foregroundPhoto src="src.jpg" />
+
+    <photos>
+      <photoSpec height="150" width="150" rotation="90" x="0" y="0" />
+      <photoSpec height="150" width="150" rotation="90" x="0" y="0" />
+      <photoSpec height="150" width="150" rotation="90" x="0" y="0" />
+    </photos>
+  </canvas>
+
+</PhotoTemplate>
