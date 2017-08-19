@@ -27,13 +27,37 @@ python3-lxml - Python bindings for libxml2 and libxslt libraries
 
 Classes Contatined:
 TemplateReader - Class that parses and contains the data in a template.xml file.
+TemplateManager - Class that manages a list of available templates.
 TemplateError  - Exception Class representing errors reading the template file.
 """
-
+import os
 from lxml import etree
 
 ##############################################################
-# Template Reader Class                                      #
+# TemplateManager Class                                      #
+##############################################################
+class TemplateManager:
+    """Class that takes a directory, reads all the templates in it and maintains a list of template objects."""
+
+    #----------------------------------------------------------------------
+    def __init__(self, dirname):
+        """TemplateManager constructor
+        Takes a directory name and searches that directory for photo templates."""
+
+        self.templateDir = dirname
+        self.templateList = list()
+
+        dirList = os.listdir(dirname)
+        for dir in dirList:
+            try:
+                reader = TemplateReader(dirname + os.path.sep + dir + os.path.sep + TemplateReader.TemplateXMLFilename)
+                self.templateList.append(reader)
+            except TemplateError:
+                print("Error reading: " + dir + ". Not Adding")
+
+        
+##############################################################
+# TemplateReader Class                                      #
 ##############################################################
 class TemplateReader:
     """ Class that parses and contains the data in a template.xml file
@@ -41,7 +65,7 @@ class TemplateReader:
     This class takes a directory name and searches for a template.xml file. If one is found, it will validate and read the file.
 
     """
-
+    TemplateXMLFilename = "template.xml"
     TemplateXSD = "PhotoTemplate.xsd"
     NS = "{http://www.scottmckittrick.com/schema/PiBooth/PhotoTemplate}"
 
