@@ -1,4 +1,5 @@
 """Module for processing and managing Photo Templates
+By: Scott McKittrick
 
 Photo templates are packages of files that describe how many photos 
 should be taken by the photo booth and how those photos should be arranged.
@@ -45,6 +46,7 @@ class TemplateManager:
         Takes a directory name and searches that directory for photo templates."""
 
         self.templateDir = dirname
+        print("Template directory: " + self.templateDir)
         self.templateList = list()
 
         dirList = os.listdir(dirname)
