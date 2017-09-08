@@ -17,7 +17,7 @@ import os
 
 import PyQt5
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QTimer,QObject, QSize
+from PyQt5.QtCore import QTimer,QObject, QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon
 
 import mainwindow_auto
@@ -101,6 +101,7 @@ class QtPyPhotobooth(QObject):
         self.templateModel = QStandardItemModel()
         for template in self.templateManager:
             item = QStandardItem()
+            item.setData(template, Qt.UserRole)
             item.setText(template.templateName)
             previewPath = template.getTemplatePreviewPath()
             if(previewPath != None):
@@ -115,7 +116,15 @@ class QtPyPhotobooth(QObject):
         self.templateView.setIconSize(QSize(150,150))
         self.templateView.setUniformItemSizes(True)
         self.templateView.setSpacing(50)
+        self.templateView.setSelectionMode(QListView.SingleSelection)
+        self.templateView.setEditTriggers(QListView.NoEditTriggers)
+        self.templateView.clicked.connect(lambda index: self.handleTemplateSelection(index))
         self.templateView.setModel(self.templateModel)
+
+    #---------------------------------------------------------#
+    def handleTemplateSelection(self, template):
+        #Switch pages and start taking pictures.
+        print(template.data(Qt.UserRole))
     
 
     
