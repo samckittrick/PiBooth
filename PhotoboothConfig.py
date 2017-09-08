@@ -17,7 +17,11 @@ PhotoboothConfig - Configuration class
 class PhotoboothConfig:
 
     def __init__(self):
-        self.templateLocation = "./templates/"
+        self.templateLocation = "./templates"
+        self.splashScreenTime = 1000
 
     def getTemplateLocation(self):
         return self.templateLocation;
+
+    def getSplashScreenTime(self):
+        return self.splashScreenTime

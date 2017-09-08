@@ -52,10 +52,38 @@ class TemplateManager:
         dirList = os.listdir(dirname)
         for dir in dirList:
             try:
-                reader = TemplateReader(dirname + os.path.sep + dir + os.path.sep + TemplateReader.TemplateXMLFilename)
+                reader = TemplateReader(self.templateDir + os.path.sep + dir,  TemplateReader.TemplateXMLFilename)
                 self.templateList.append(reader)
             except TemplateError:
                 print("Error reading: " + dir + ". Not Adding")
+
+    #------------------------------------------------------------------------#
+    def getCount(self):
+        """Return the number of templates in the list"""
+        return len(self.templateList)
+
+    #-----------------------------------------------------------------------#
+    def getTemplateAtIndex(self, index):
+        """Return the TemplateReader object at the specified index."""
+        return self.templateList[index]
+
+    #-----------------------------------------------------------------------#
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    #-----------------------------------------------------------------------#
+    def __next__(self):
+        return self.next()
+
+    #-----------------------------------------------------------------------#
+    def next(self):
+        if(self.count < len(self.templateList)):
+            cur = self.templateList[self.count]
+            self.count += 1
+            return cur
+        else:
+            raise StopIteration()
 
         
 ##############################################################
@@ -72,21 +100,22 @@ class TemplateReader:
     NS = "{http://www.scottmckittrick.com/schema/PiBooth/PhotoTemplate}"
 
     #----------------------------------------------------------------------
-    def __init__(self, filename):
+    def __init__(self, dirname, filename):
         """Template reader constructor
         
         Parses a template package and stores the resultant data for access. 
         Throws TemplateError when it has problems parsing a template package."""
-        self.TemplateFilename = filename
+        self.TemplateDir = dirname
+        self.TemplateFilename = self.TemplateDir + os.path.sep + filename
 
         try:
-            print("Loading Template: " + filename)
+            print("Loading Template: " + self.TemplateFilename)
             
             #load the template xml
-            self.template_xml = etree.parse(filename)
+            self.template_xml = etree.parse(self.TemplateFilename)
 
             #validate agains the XSD file
-            print("Validating template file for " + filename)
+            print("Validating template file for " + self.TemplateFilename)
             if(self.__validateFile() != True):
                 raise TemplateError("Error: XML Validation failed. ")
             else:
@@ -169,8 +198,15 @@ class TemplateReader:
                 
             photoSpecTuple = (height, width, x, y, rot)
             self.photoList.append(photoSpecTuple)
-            
-    
+
+    #-----------------------------------------------------------------------#
+    def getTemplatePreviewPath(self):
+        """Returns the path to the preview image file."""
+        if(hasattr(self, 'previewImageFilename')):
+            return self.TemplateDir + os.path.sep + self.previewImageFilename
+        else:
+            return None
+        
 #################################################################
 # TemplateError                                                 #
 #################################################################

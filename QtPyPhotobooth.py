@@ -13,10 +13,12 @@ QtPyPhotobooth - Main Application controller class.
 """
 from enum import Enum
 import time
+import os
 
 import PyQt5
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QTimer,QObject
+from PyQt5.QtCore import QTimer,QObject, QSize
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon
 
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCamera
@@ -41,6 +43,10 @@ class QtPyPhotobooth(QObject):
         """QtPyPhotobooth constructor. 
         Takes no Arguments."""
 
+        #initialise some paths
+        self.resourcePath = "." + os.path.sep + "res"
+        self.defaultTemplateIcon = "defaultTemplateIcon.png"
+        
         print("Initializing configuration...")
         self.config = PhotoboothConfig()
 
@@ -67,13 +73,13 @@ class QtPyPhotobooth(QObject):
         #Configure the template list.
         print("Initializing Templates...")
         self.templateManager = TemplateManager(self.config.getTemplateLocation())
-        configureTemplateView()
+        self.__configureTemplateView()
 
         self.mainWindow.show()
 
         #Show the splash screen for a specific amount of time before moving on.
         self.timer = QTimer()
-        self.timer.setInterval(5000)
+        self.timer.setInterval(self.config.getSplashScreenTime())
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE))
         self.timer.start()
@@ -92,7 +98,25 @@ class QtPyPhotobooth(QObject):
         #configure size
         #create templateListModel class
         #create templatDelegate class
-        pass
+        self.templateModel = QStandardItemModel()
+        for template in self.templateManager:
+            item = QStandardItem()
+            item.setText(template.templateName)
+            previewPath = template.getTemplatePreviewPath()
+            if(previewPath != None):
+                pixmap = QPixmap(previewPath)
+            else:
+                pixmap = QPixmap(self.resourcePath + os.path.sep + self.defaultTemplateIcon)
+            item.setIcon(QIcon(pixmap))
+            #ToDo Add some error handling for missing or unspecified preview images. Include res directory for default icons
+            self.templateModel.appendRow(item)
+        
+        self.templateView.setViewMode(QListView.IconMode)
+        self.templateView.setIconSize(QSize(150,150))
+        self.templateView.setUniformItemSizes(True)
+        self.templateView.setSpacing(50)
+        self.templateView.setModel(self.templateModel)
+    
 
     
 ####################################

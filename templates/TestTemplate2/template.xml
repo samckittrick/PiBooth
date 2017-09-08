@@ -3,10 +3,8 @@
 <PhotoTemplate 
 	xmlns="http://www.scottmckittrick.com/schema/PiBooth/PhotoTemplate"
 	>
-  <name>Test Template</name>
+  <name>Test Template 2</name>
   <description>Test template for python photo booth</description>
-  <!-- Preview Image-->
-  <previewImage src="preview.png" />
 
   <canvas height="150" width="150" backgroundColor="#FFFFFF">
     <backgroundPhoto src="src.jpg" />
