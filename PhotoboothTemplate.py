@@ -107,6 +107,17 @@ class TemplateReader:
         Throws TemplateError when it has problems parsing a template package."""
         self.TemplateDir = dirname
         self.TemplateFilename = self.TemplateDir + os.path.sep + filename
+        #Initialize data members
+        self.templateName = None
+        self.description = None
+        self.author = None
+        self.previewImageFilename = None
+        self.backgroundColor = None
+        self.height = None
+        self.width = None
+        self.backgroundPhoto = None
+        self.foregroundPhoto = None
+        self.photoList = list()
 
         try:
             print("Loading Template: " + self.TemplateFilename)

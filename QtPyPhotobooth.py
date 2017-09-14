@@ -37,15 +37,17 @@ class QtPyPhotobooth(QObject):
     class Screens(Enum):
         SPLASH = 0
         TEMPLATE = 1
+        PREVIEW = 2
 
     #-----------------------------------------------------------#    
     def __init__(self):
         """QtPyPhotobooth constructor. 
         Takes no Arguments."""
 
-        #initialise some paths
+        #initialise some members
         self.resourcePath = "." + os.path.sep + "res"
         self.defaultTemplateIcon = "defaultTemplateIcon.png"
+        self.templateModel = None
         
         print("Initializing configuration...")
         self.config = PhotoboothConfig()
@@ -68,7 +70,7 @@ class QtPyPhotobooth(QObject):
 
         #Configure the camera
         print("Initializing camera hardware")
-        self.camera = PhotoboothCamera()
+        self.camera = PhotoboothCameraPi()
 
         #Configure the template list.
         print("Initializing Templates...")
@@ -83,8 +85,6 @@ class QtPyPhotobooth(QObject):
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE))
         self.timer.start()
-        
-
 
     #-----------------------------------------------------------#
     def __changeScreens(self, screen):
@@ -122,10 +122,15 @@ class QtPyPhotobooth(QObject):
         self.templateView.setModel(self.templateModel)
 
     #---------------------------------------------------------#
-    def handleTemplateSelection(self, template):
+    def handleTemplateSelection(self, templateIndex):
+        """Handle the event when the user selects a template. """
         #Switch pages and start taking pictures.
-        print(template.data(Qt.UserRole))
-    
+        self.__changeScreens(QtPyPhotobooth.Screens.PREVIEW)
+        print("Template Selected: " + templateIndex.data())
+        template = templateIndex.data(Qt.UserRole)
+        self.selectedTemplate = template
+        numPhotos = len(template.photoList)
+        print("Number of photos to take: " + str(numPhotos))
 
     
 ####################################
