@@ -69,6 +69,7 @@
       </layout>
      </widget>
     </widget>
+    <widget class="QWidget" name="page_3"/>
    </widget>
   </widget>
  </widget>

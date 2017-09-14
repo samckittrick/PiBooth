@@ -47,6 +47,9 @@ class Ui_MainWindow(object):
         self.templateView.setObjectName("templateView")
         self.gridLayout_2.addWidget(self.templateView, 0, 0, 1, 1)
         self.stackedWidget.addWidget(self.page_2)
+        self.page_3 = QtWidgets.QWidget()
+        self.page_3.setObjectName("page_3")
+        self.stackedWidget.addWidget(self.page_3)
         MainWindow.setCentralWidget(self.centralWidget)
 
         self.retranslateUi(MainWindow)
