@@ -213,7 +213,7 @@ class TemplateReader:
     #-----------------------------------------------------------------------#
     def getTemplatePreviewPath(self):
         """Returns the path to the preview image file."""
-        if(hasattr(self, 'previewImageFilename')):
+        if(self.previewImageFilename != None):
             return self.TemplateDir + os.path.sep + self.previewImageFilename
         else:
             return None

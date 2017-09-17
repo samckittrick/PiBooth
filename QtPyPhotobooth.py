@@ -21,7 +21,7 @@ from PyQt5.QtCore import QTimer,QObject, QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon
 
 import mainwindow_auto
-from PhotoboothCamera import PhotoboothCamera
+from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
 from PhotoboothConfig import PhotoboothConfig
 from PhotoboothTemplate import TemplateManager
 
@@ -70,7 +70,8 @@ class QtPyPhotobooth(QObject):
 
         #Configure the camera
         print("Initializing camera hardware")
-        self.camera = PhotoboothCameraPi()
+        self.camera = PhotoboothCameraPi(screenSize.width(), screenSize.height())
+        self.camera.overlay = BasicCountdownOverlayFactory(self.resourcePath)
 
         #Configure the template list.
         print("Initializing Templates...")
@@ -131,6 +132,7 @@ class QtPyPhotobooth(QObject):
         self.selectedTemplate = template
         numPhotos = len(template.photoList)
         print("Number of photos to take: " + str(numPhotos))
+        self.camera.capturePhotos(numPhotos)
 
     
 ####################################
