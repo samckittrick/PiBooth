@@ -1,0 +1,29 @@
+
+#Main Application Settings
+#######################################
+# templateDir - Location of the template files
+templateDir: "./templates"
+
+# splashScreenTime - The number of milliseconds to display the splash screen 
+splashScreenTime: 1000
+
+#Camera Settings
+######################################
+
+# Camera Type - The type of camera being used
+#  'RPI2' - Raspberry Pi Camera Module v2
+#  'V4L2' - Video 4 Linux based Webcam (Not implemented yet)
+cameraType: "RPI2"
+
+# Overlay - The type of overlay to use for countdowns and image
+# display during image capture.
+# 'None' - No Overlays
+# 'Basic' - Basic count down overlay. See documentation for parameters.
+overlay: "Basic"
+
+# Overlay options - Options specific to the chosen 
+overlayOptions:
+#   font: "<path to font>"
+   color: "#0033cc"
+   
+   

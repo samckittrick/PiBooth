@@ -227,3 +227,16 @@ class BasicCountdownOverlayFactory:
         w,h = draw.textsize(str(text), font)
         draw.text(((width-w)/2,(height-h)/2), str(text), self.fillColor, font)
         return im
+    
+    #-----------------------------------------------------#
+    def setColorHex(self, hexStr):
+        #convert to rgb tuple
+        rgb = self.hex_to_rgb(hexStr)
+        #add the alpha component and save
+        self.fillColor = rgb + (255,)
+
+    #-----------------------------------------------------#
+    def hex_to_rgb(self,value):
+        value = value.lstrip('#')
+        lv = len(value)
+        return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))

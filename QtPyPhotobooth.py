@@ -6,6 +6,7 @@ Configurable and selectable templates
 
 Dependencies:
 PyQt5
+PyYAML
 
 Classes Contained:
 QtPyPhotobooth - Main Application controller class.
@@ -16,6 +17,8 @@ import time
 import os
 import threading
 
+import yaml
+
 import PyQt5
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QTimer,QObject, QSize, Qt
@@ -23,7 +26,6 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon
 
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
-from PhotoboothConfig import PhotoboothConfig
 from PhotoboothTemplate import TemplateManager
 
 ################################################################
@@ -51,8 +53,10 @@ class QtPyPhotobooth(QObject):
         self.templateModel = None
         
         print("Initializing configuration...")
-        self.config = PhotoboothConfig()
-
+        self.configFilename = "config.yaml"
+        f = open(self.configFilename, 'r')
+        self.config = yaml.load(f)
+        
         print("Intializing  Gui...")
         self.form = mainwindow_auto.Ui_MainWindow()
         self.mainWindow = QMainWindow()
@@ -64,30 +68,91 @@ class QtPyPhotobooth(QObject):
 
         #Configure the main window
         self.mainWindow.showFullScreen()
-        screenSize = self.mainWindow.size()
+        self.screenSize = self.mainWindow.size()
         print("Screen size: ")
-        print("\tWidth: " + str(screenSize.width()))
-        print("\tHeight: " + str(screenSize.height()))
+        print("\tWidth: " + str(self.screenSize.width()))
+        print("\tHeight: " + str(self.screenSize.height()))
 
         #Configure the camera
-        print("Initializing camera hardware")
-        self.camera = PhotoboothCameraPi(screenSize.width(), screenSize.height())
-        self.camera.overlayFactory = BasicCountdownOverlayFactory(self.resourcePath)
+        self.__configureCamera()
 
+        #Configure overlays
+        self.__configureOverlays()
+                
         #Configure the template list.
-        print("Initializing Templates...")
-        self.templateManager = TemplateManager(self.config.getTemplateLocation())
+        self.__configureTemplates()
         self.__configureTemplateView()
 
         self.mainWindow.show()
 
         #Show the splash screen for a specific amount of time before moving on.
+        if('splashScreenTime' in self.config):
+            self.splashTime = self.config['splashScreenTime']
+        else:
+            print("No Splash Screen Time specified. Defaulting to 5 seconds")
+            self.splashTime = 5000
         self.timer = QTimer()
-        self.timer.setInterval(self.config.getSplashScreenTime())
+        self.timer.setInterval(self.splashTime)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE))
         self.timer.start()
 
+    #-----------------------------------------------------------#
+    def __configureCamera(self):
+        """Get the camera configuration information from the config file and initialize the hardware"""
+        print("Initializing camera hardware")
+        if('cameraType' in self.config):
+            cameraTypeStr = self.config['cameraType']
+        else:
+            print("No Camera type specified. Defaulting to RPI2")
+            cameraTypeStr = "RPI2"
+
+        if(cameraTypeStr == "RPI2"):
+            print("Starting RPI2")
+            self.camera = PhotoboothCameraPi(self.screenSize.width(), self.screenSize.height())
+        elif(cameraTypeStr == "V4L2"):
+            print("V4L2 cameras not yet supported.")
+            sys.exit()
+        else:
+            print("Unknown Camera type. ")
+            sys.exit()
+
+    #-----------------------------------------------------------#
+    def __configureOverlays(self):
+        """Configure the overlays based on the config file."""
+        if('overlay' in self.config):
+            overlayTypeStr = self.config['overlay']
+        else:
+            print("No Overlay specified. Defaulting to None")
+            overlayTypeStr = "None"
+
+        if(overlayTypeStr == "None"):
+            print("No Overlay Function Required")
+        elif(overlayTypeStr == "Basic"):
+            print("Basic Overlay Specified")
+            self.camera.overlayFactory = BasicCountdownOverlayFactory(self.resourcePath)
+            if('overlayOptions' in self.config):
+                oopts = self.config['overlayOptions']
+                if('font' in oopts):
+                    self.camera.overlayFactory.fontFile = oopts['font']
+                if('color' in oopts):
+                    self.camera.overlayFactory.setColorHex(oopts['color'])
+        else:
+            print("Unknown Overlay Type")
+            sys.exit()
+
+    #-----------------------------------------------------------#
+    def __configureTemplates(self):
+        """Get the template information from the config file and initialize the template manager"""
+        print("Initializing Templates...")
+        if('templateDir' in self.config):
+            self.templateDir = self.config['templateDir']
+        else:
+            print("No template directory specified. Defaulting to ./templates")
+            self.templateDir = "./templates"
+            
+        self.templateManager = TemplateManager(self.templateDir)
+    
     #-----------------------------------------------------------#
     def __changeScreens(self, screen):
         """Changes the screens on the gui to the selected screen"""

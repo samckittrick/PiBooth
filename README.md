@@ -3,15 +3,18 @@ By Scott McKittrick
 
 Qt and Python Based photobooth applicaton for the Raspberry Pi 3 and PiCamera v2.0.
 
+** Note: This application is still under development. It may change at any time**
 ## Features
 * Full Touchscsreen Control
 * Configurable image templates
   * Create any number of templates with overlays, backgrounds, and multiple images
   * Let your users select from a set of templates for their own custom photos
-* Configurable color schemes
-  * Match the colors to your event
 * Configurable countdown styles
   * Customize the countdown process
+
+## Roadmap
+* Configurable Color schemes
+  # Match the colors to your event
 
 ## Dependencies
 ### Hardware
