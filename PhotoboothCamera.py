@@ -11,9 +11,10 @@ BasicCountdownOverlayFactory - Factory object for creating countdown overlays
  """
 import os
 import time
+from io import BytesIO
 from abc import ABC, ABCMeta, abstractmethod
 import picamera
-from PIL import Image, ImageFont, ImageDraw 
+from PIL import Image, ImageFont, ImageDraw, ImageOps
 
 ###################################################################
 # AbstractPhotoboothCamera                                        #
@@ -44,11 +45,6 @@ class AbstractPhotoboothCamera:
         callback - A callable that takes a list as the argument"""
         self.resetState()
         while True:
-            print("New State:")
-            print("\t current count: " + str(self.currentCountdown))
-            print("\t displayImage: " + str(self.displayImage))
-            print("\t list len: " + str(len(self.imgList)))
-            print("\t numPhotos: " + str(numPhotos))
             #if we are still counting down, just continue
             if(self.currentCountdown > 0):
                 self.updateOverlay()
@@ -58,8 +54,10 @@ class AbstractPhotoboothCamera:
             else:
                 #if we are displaying the countdown, it's time to take a picture
                 if(not self.displayImage):
+                    self.removeOverlay()
                     self.takePicture()
                     self.displayImage = True
+                    self.updateOverlay()
                     self.currentCountdown = self.resultShowLength
                 #if we are displaying a result image
                 else:
@@ -131,9 +129,7 @@ class PhotoboothCameraPi(AbstractPhotoboothCamera):
     #-------------------------------------------------#
     def updateOverlay(self):
         #show the countdown
-        print("Updating Overlay")
         if((not self.displayImage) and (self.overlayFactory != None)):
-            print("Overlay in place")
             oImg = self.overlayFactory.getOverlayImage(self.currentCountdown, self.previewWidth, self.previewHeight)
                 
             #One difficulty of working with overlay renderers is that they expect unencoded RGB input which is padded
@@ -159,8 +155,29 @@ class PhotoboothCameraPi(AbstractPhotoboothCamera):
             self.__overlayHandle = tmpOverlayHandle
         #show the result image
         elif(self.displayImage):
-            print("Displaying image")
+            #scale the image to not take the entire screen
+            resultImage = ImageOps.expand(self.imgList[-1], 5, "black")
+            scaleFactor = 0.75
+            scaledSize = ((self.previewWidth * scaleFactor), (self.previewHeight * scaleFactor))
+            resultImage.thumbnail(scaledSize)
 
+            #place it on a transparent field the full screen size
+            paddedImg = Image.new('RGBA', (
+                ((self.previewWidth + 31) // 32) * 32,
+                ((self.previewHeight + 15) // 16) * 16,
+                ))
+            paddedImg.paste(resultImage, ((self.previewWidth - resultImage.size[0]) // 2, (self.previewHeight - resultImage.size[1]) // 2 ))
+
+            #Create the overlay behind and then flip and remove the old one.
+            tmpOverlayHandle = self.camera.add_overlay(paddedImg.tobytes(), (self.previewWidth, self.previewHeight), 'rgba')
+            if(self.__overlayHandle != None):
+                self.__overlayHandle.layer = 1
+            tmpOverlayHandle.layer = 3
+            if(self.__overlayHandle != None):
+                self.camera.remove_overlay(self.__overlayHandle)
+            self.__overlayHandle = tmpOverlayHandle
+            
+            
     #-----------------------------------------------------#
     def removeOverlay(self):
         if(self.__overlayHandle != None):
@@ -170,7 +187,10 @@ class PhotoboothCameraPi(AbstractPhotoboothCamera):
     #-----------------------------------------------------#
     def takePicture(self):
         print("Taking Picture")
-        self.imgList.append(len(self.imgList))
+        stream = BytesIO()
+        self.camera.capture(stream, "jpeg")
+        stream.seek(0)
+        self.imgList.append(Image.open(stream))
 
 
 #################################################################
@@ -204,6 +224,5 @@ class BasicCountdownOverlayFactory:
         #Actually draw the text on the image.
         draw = ImageDraw.Draw(im)
         w,h = draw.textsize(str(text), font)
-        print("Overlay: Width: " + str(w) + " Height: " + str(h))
         draw.text(((width-w)/2,(height-h)/2), str(text), self.fillColor, font)
         return im
