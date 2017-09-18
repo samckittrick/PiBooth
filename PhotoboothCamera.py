@@ -10,79 +10,132 @@ PhotoboothCameraPi - Raspberry Pi Camera Module Class
 BasicCountdownOverlayFactory - Factory object for creating countdown overlays
  """
 import os
+import time
 from abc import ABC, ABCMeta, abstractmethod
 import picamera
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw 
 
 ###################################################################
 # AbstractPhotoboothCamera                                        #
 ###################################################################
 class AbstractPhotoboothCamera:
-    """Interface representing the camera allowing for photos to be taken"""
+    """Interface representing the camera allowing for photos to be taken
+    Provides a state machine for manipulating the video stream. """
     __metaclass__ = ABCMeta
 
-    #-------------------------------------------------------------#
-    @abstractmethod
-    def setCountdownLength(self, length):
-        """Set the number of seconds the countdown should last before capturing the photo"""
-        pass
+    #----------------------------------------------------------#
+    def __init__(self):
+        self.countDownLength = 5
+        self.resultShowLength = 3
+        self.imgList = list()
+        self.resetState()
 
-    #------------------------------------------------------------#
+    #-----------------------------------------------------------#
+    def resetState(self):
+        """Reset the state machine to the base state"""
+        self.currentCountdown = self.countDownLength
+        self.displayImage = False
+
+    #-----------------------------------------------------------#
+    def capturePhotos(self, numPhotos, callback):
+        """Step through the state machine
+        Parameters:
+        numPhotos - The number of photos to take
+        callback - A callable that takes a list as the argument"""
+        self.resetState()
+        while True:
+            print("New State:")
+            print("\t current count: " + str(self.currentCountdown))
+            print("\t displayImage: " + str(self.displayImage))
+            print("\t list len: " + str(len(self.imgList)))
+            print("\t numPhotos: " + str(numPhotos))
+            #if we are still counting down, just continue
+            if(self.currentCountdown > 0):
+                self.updateOverlay()
+                self.currentCountdown -= 1
+            
+            #if we are done counting down, we need to change state
+            else:
+                #if we are displaying the countdown, it's time to take a picture
+                if(not self.displayImage):
+                    self.takePicture()
+                    self.displayImage = True
+                    self.currentCountdown = self.resultShowLength
+                #if we are displaying a result image
+                else:
+                    #if wehave enough images
+                    if(len(self.imgList) >= numPhotos):
+                        self.removeOverlay()
+                        break
+                    #otherwise take another
+                    else:
+                        self.currentCountdown = self.countDownLength
+                        self.displayImage = False
+            time.sleep(1)
+        #return the list of images
+        callback(self.imgList)
+
+    #-----------------------------------------------------------#
     @abstractmethod
-    def setResultShowtime(self, length):
-        """Set the number of seconds the resultant image should be displayed before starting the next countdown"""
+    def updateOverlay(self):
+        """Function for updating the overlay displayed on screen"""
+        pass
+    
+    #-----------------------------------------------------------#
+    @abstractmethod
+    def removeOverlay(self):
+        """Function for hiding the overlay altogether"""
         pass
 
     #-----------------------------------------------------------#
     @abstractmethod
-    def capturePhotos(numPhotos):
-        """Capture the requested number of photos. 
-        numPhotos - number of photos to be captured
-        return - List containing pixmaps of photos"""
+    def takePicture(self):
+        """Actually capture an image"""
         pass
-    
+
+    #-----------------------------------------------------------#
+    @abstractmethod
+    def start_preview(self):
+        """Do whatever functions it takes to start the preview stream"""
+        pass
+
+    #-----------------------------------------------------------#
+    @abstractmethod
+    def end_preview(self):
+        """Do whatever functions it takes to end the preview stream"""
+        pass
+
 ####################################################################
 # PhotoboothCameraPi class                                         #
 ####################################################################
 class PhotoboothCameraPi(AbstractPhotoboothCamera):
-    """Implementation of the AbstractPhotoboothCamera using the raspberry pi camera module 2.0 and PiCamera"""
-    #-----------------------------------------------------#
+    """Implementation of the AbstractPhotoboothCamera using the raspberry pi camera module 2.0 and PiCamera
+    Since PiCamera isn't easily integrated with QT, I am doing some of the Gui stuff here. """
+    #-------------------------------------------------#
     def __init__(self, previewWidth, previewHeight):
-        """PhotoboothCamera constructor"""
-        self.countDownLength = 5
-        self.resultShowTime = 2
+        super().__init__()
         self.camera = picamera.PiCamera()
-        self.photoList = list()
         self.previewWidth = previewWidth
         self.previewHeight = previewHeight
-        self.overlay = None #give it the overlay later.
+        self.overlayFactory = None
+        self.__overlayHandle = None
 
-    #-----------------------------------------------------#
-    def setCountdownLength(self, len):
-        self.countDownLength = len
+    #-------------------------------------------------#
+    def start_preview(self):
+        self.camera.start_preview()
 
-    #-----------------------------------------------------#
-    def setResultShowTime(self, len):
-        self.resultShowTime = len
+    #-------------------------------------------------#
+    def end_preview(self):
+        self.camera.stop_preview()
 
-    #-----------------------------------------------------#
-    def __timerTriggered(self):
-        """Do the next step in the state machine. This will happen once a second for (count down time * number of photos) seconds."""
-        if(self.__currentCountDown == 0):
-            #If we are at the end of a countdown.
-            #Capture the image, add it to the list and reset the countdown
-            pass
-
-        else:
-            #update the overlay and state machine.
-            self.__updateOverlay(self.__currentCountDown)
-            self.__currentCountDown -= self.__currentCountDown
-
-    #----------------------------------------------------#
-    def __updateOverlay(self, currentNumber):
-        if(isinstance(self.overlay, BasicCountdownOverlayFactory)):
-            oImg = self.overlay.getOverlayImage(currentNumber, self.previewWidth, self.previewHeight)
-
+    #-------------------------------------------------#
+    def updateOverlay(self):
+        #show the countdown
+        print("Updating Overlay")
+        if((not self.displayImage) and (self.overlayFactory != None)):
+            print("Overlay in place")
+            oImg = self.overlayFactory.getOverlayImage(self.currentCountdown, self.previewWidth, self.previewHeight)
+                
             #One difficulty of working with overlay renderers is that they expect unencoded RGB input which is padded
             #up to the camera’s block size. The camera’s block size is 32x16 so any image data provided to a renderer
             #must have a width which is a multiple of 32, and a height which is a multiple of 16. The specific RGB
@@ -92,30 +145,32 @@ class PhotoboothCameraPi(AbstractPhotoboothCamera):
             paddedImg = Image.new(oImg.mode, (
                 ((oImg.size[0] + 31) // 32) * 32,
                 ((oImg.size[1] + 15) // 16) * 16,
-                ))
+            ))
             paddedImg.paste(oImg, (0, 0))
             
             #create overlay behind, then flip and remove old one
             #Pillow Image object uses upper case mode names (e.g. "RGBA") but picamera uses lower case (e.g. "rgba")
-            self.__overlayHandle = self.camera.add_overlay(paddedImg.tobytes(), oImg.size, oImg.mode.lower())
-            self.__overlayHandle.layer = 3
-
-        else:
-            print("Overlay is wrong type or doesn't exist")
-            
+            tmpOverlayHandle = self.camera.add_overlay(paddedImg.tobytes(), oImg.size, oImg.mode.lower())
+            if(self.__overlayHandle != None):
+                self.__overlayHandle.layer = 1
+            tmpOverlayHandle.layer = 3
+            if(self.__overlayHandle != None):
+                self.camera.remove_overlay(self.__overlayHandle)
+            self.__overlayHandle = tmpOverlayHandle
+        #show the result image
+        elif(self.displayImage):
+            print("Displaying image")
 
     #-----------------------------------------------------#
-    def capturePhotos(self, numPhotos):
-        #photo capture uses a simple state machine. Initialize it here.
-        self.__photosLeft = numPhotos
-        self.__currentCountDown = self.countDownLength
+    def removeOverlay(self):
+        if(self.__overlayHandle != None):
+            self.camera.remove_overlay(self.__overlayHandle)
+            self.__overlayHandle = None
 
-        self.camera.start_preview()
-        print("Camera resolution:")
-        print(self.camera.resolution)
-        self.__timerTriggered()
-        #Add QTimer here to continue the countdown
-        
+    #-----------------------------------------------------#
+    def takePicture(self):
+        print("Taking Picture")
+        self.imgList.append(len(self.imgList))
 
 
 #################################################################

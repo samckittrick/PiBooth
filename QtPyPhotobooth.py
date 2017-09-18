@@ -14,6 +14,7 @@ QtPyPhotobooth - Main Application controller class.
 from enum import Enum
 import time
 import os
+import threading
 
 import PyQt5
 from PyQt5.QtWidgets import *
@@ -71,7 +72,7 @@ class QtPyPhotobooth(QObject):
         #Configure the camera
         print("Initializing camera hardware")
         self.camera = PhotoboothCameraPi(screenSize.width(), screenSize.height())
-        self.camera.overlay = BasicCountdownOverlayFactory(self.resourcePath)
+        self.camera.overlayFactory = BasicCountdownOverlayFactory(self.resourcePath)
 
         #Configure the template list.
         print("Initializing Templates...")
@@ -119,11 +120,16 @@ class QtPyPhotobooth(QObject):
         self.templateView.setSpacing(50)
         self.templateView.setSelectionMode(QListView.SingleSelection)
         self.templateView.setEditTriggers(QListView.NoEditTriggers)
-        self.templateView.clicked.connect(lambda index: self.handleTemplateSelection(index))
+        self.templateView.clicked.connect(lambda index: self.onTemplateSelected(index))
         self.templateView.setModel(self.templateModel)
 
     #---------------------------------------------------------#
-    def handleTemplateSelection(self, templateIndex):
+    def onPhotosTaken(self, photoList):
+        print(photoList)
+        self.camera.end_preview()
+
+    #---------------------------------------------------------#
+    def onTemplateSelected(self, templateIndex):
         """Handle the event when the user selects a template. """
         #Switch pages and start taking pictures.
         self.__changeScreens(QtPyPhotobooth.Screens.PREVIEW)
@@ -132,7 +138,10 @@ class QtPyPhotobooth(QObject):
         self.selectedTemplate = template
         numPhotos = len(template.photoList)
         print("Number of photos to take: " + str(numPhotos))
-        self.camera.capturePhotos(numPhotos)
+
+        self.camera.start_preview()
+        thread = threading.Thread(target=self.camera.capturePhotos, args=(numPhotos, self.onPhotosTaken))
+        thread.start()
 
     
 ####################################
