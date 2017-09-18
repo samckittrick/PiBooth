@@ -156,6 +156,7 @@ class PhotoboothCameraPi(AbstractPhotoboothCamera):
         #show the result image
         elif(self.displayImage):
             #scale the image to not take the entire screen
+            #also add a black border 5 pixels wide
             resultImage = ImageOps.expand(self.imgList[-1], 5, "black")
             scaleFactor = 0.75
             scaledSize = ((self.previewWidth * scaleFactor), (self.previewHeight * scaleFactor))
