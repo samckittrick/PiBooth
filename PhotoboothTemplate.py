@@ -29,10 +29,12 @@ python3-lxml - Python bindings for libxml2 and libxslt libraries
 Classes Contatined:
 TemplateReader - Class that parses and contains the data in a template.xml file.
 TemplateManager - Class that manages a list of available templates.
+ImageProcessor - Class that takes a template and provides an interface to use it to create final images.
 TemplateError  - Exception Class representing errors reading the template file.
 """
 import os
 from lxml import etree
+from PIL import Image
 
 ##############################################################
 # TemplateManager Class                                      #
@@ -180,16 +182,16 @@ class TemplateReader:
         if(backgroundColorAttr is not None):
             self.backgroundColor = backgroundColorAttr
             
-        self.height = canvas.get("height")
-        self.width = canvas.get("width")
+        self.height = int(canvas.get("height"))
+        self.width = int(canvas.get("width"))
 
         backgroundPhotoElem = canvas.find(self.NS+"backgroundPhoto")
         if(backgroundPhotoElem is not None):
-            self.backgroundPhoto = backgroundPhotoElem.get("src")
+            self.backgroundPhoto = self.TemplateDir + os.path.sep + backgroundPhotoElem.get("src")
 
         foregroundPhotoElem = canvas.find(self.NS+"foregroundPhoto")
         if(foregroundPhotoElem is not None):
-            self.foregroundPhoto = foregroundPhotoElem.get("src")
+            self.foregroundPhoto = self.TemplateDir + os.path.sep + foregroundPhotoElem.get("src")
 
         photoList = canvas.find(self.NS+"photos")
         self.__parsePhotoList(photoList)
@@ -199,15 +201,16 @@ class TemplateReader:
         """Parses the photo list object and it's contents"""
         self.photoList = list()
         for photoSpec in photoList.getchildren():
-            height = photoSpec.get("height")
-            width = photoSpec.get("width")
-            x = photoSpec.get("x")
-            y = photoSpec.get("y")
-            rot = photoSpec.get("rotation")
-            if(rot is None):
+            height = int(photoSpec.get("height"))
+            width = int(photoSpec.get("width"))
+            x = int(photoSpec.get("x"))
+            y = int(photoSpec.get("y"))
+            if(photoSpec.get("rotation") is None):
                 rot = 0
+            else:
+                rot = int(photoSpec.get("rotation"))
                 
-            photoSpecTuple = (height, width, x, y, rot)
+            photoSpecTuple = {'x': x, 'y': y, 'width': width, 'height': height, 'rotation': rot}
             self.photoList.append(photoSpecTuple)
 
     #-----------------------------------------------------------------------#
@@ -217,7 +220,63 @@ class TemplateReader:
             return self.TemplateDir + os.path.sep + self.previewImageFilename
         else:
             return None
+
+#################################################################
+# ImageProcessor                                                #
+#################################################################
+class ImageProcessor:
+    """Contains a template object and provides an interface to process image sets based on the template. The template within it cannot be changed. Instead, simply create a new ImageProcessor object with a new template."""
+
+    #------------------------------------------------------------------------#
+    def __init__(self, template):
+        """Constructor takes TemplateReader object. """
+        self.template = template
         
+    #-----------------------------------------------------------------------#
+    def processImages(self, imageList):
+        """Takes a list of images and processes them according to the contained template. Returns a PIL Image object"""
+
+        # Create the initial canvas
+        canvasSize = (self.template.width, self.template.height)
+        if(self.template.backgroundColor != None):
+            canvasColor = self.hex_to_rgb(self.template.backgroundColor)
+        else:
+            canvasColor = (0,0,0,0)
+        mImg = Image.new("RGB", canvasSize, canvasColor)
+
+        #Paste in the background image if there is one.
+        if(self.template.backgroundPhoto != None):
+            bgImg = Image.open(self.template.backgroundPhoto)
+            mImg.paste(bgImg, (0, 0))
+
+        #For each photo resize, rotate and paste.
+        #Note the image is resized before rotation. However, since the
+        #   coordinate system does not allow for rotated rectangles the
+        #   x and y coordinates now represent the upper left corner of
+        #   the new bounding box.
+        #Note: The rotation value is the degrees to rotate counter clockwise
+        for i in range(0, len(self.template.photoList)):
+            photoSpec = self.template.photoList[i]
+            takenImg = imageList[i].convert("RGBA")
+            takenImg.thumbnail((photoSpec['width'], photoSpec['height']), Image.ANTIALIAS)
+            if(photoSpec['rotation'] != 0):
+                tmp = takenImg.rotate(photoSpec['rotation'], Image.BILINEAR, 1)
+                takenImg = tmp
+            mImg.paste(takenImg, (photoSpec['x'], photoSpec['y']), takenImg)   
+            
+        #paste the overlay.
+        if(self.template.foregroundPhoto != None):
+            fgImg = Image.open(self.template.foregroundPhoto)
+            mImg.paste(fgImg, (0,0), fgImg)
+            
+        return mImg
+
+    #-----------------------------------------------------------------------#
+    def hex_to_rgb(self,value):
+        value = value.lstrip('#')
+        lv = len(value)
+        return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+    
 #################################################################
 # TemplateError                                                 #
 #################################################################
