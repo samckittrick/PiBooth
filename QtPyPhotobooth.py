@@ -26,7 +26,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon
 
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
-from PhotoboothTemplate import TemplateManager
+from PhotoboothTemplate import TemplateManager, ImageProcessor
 
 ################################################################
 # QtPyPhotobooth Class                                         #
@@ -190,8 +190,11 @@ class QtPyPhotobooth(QObject):
 
     #---------------------------------------------------------#
     def onPhotosTaken(self, photoList):
-        print(photoList)
+        #Move to the processing page.
         self.camera.end_preview()
+        resultImage = self.processor.processImages(photoList)
+        resultImage.save("boothOutput.jpg")
+        print("photo saved")
 
     #---------------------------------------------------------#
     def onTemplateSelected(self, templateIndex):
@@ -204,9 +207,12 @@ class QtPyPhotobooth(QObject):
         numPhotos = len(template.photoList)
         print("Number of photos to take: " + str(numPhotos))
 
+        #Configure and start the camera
+        self.camera.setCaptureResolution(self.selectedTemplate.getMaxImageSize())
         self.camera.start_preview()
         thread = threading.Thread(target=self.camera.capturePhotos, args=(numPhotos, self.onPhotosTaken))
         thread.start()
+        self.processor = ImageProcessor(self.selectedTemplate)
 
     
 ####################################

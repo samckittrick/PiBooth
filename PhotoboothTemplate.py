@@ -221,6 +221,15 @@ class TemplateReader:
         else:
             return None
 
+    #-----------------------------------------------------------------------#
+    def getMaxImageSize(self):
+        """Get the size of the largest image. Currently assumes that all images will be the same aspect ratio"""
+        maxSize = (0,0)
+        for spec in self.photoList:
+            if(spec['width'] > maxSize[0]):
+                maxSize = (spec['width'], spec['height'])
+        return maxSize
+
 #################################################################
 # ImageProcessor                                                #
 #################################################################

@@ -103,6 +103,12 @@ class AbstractPhotoboothCamera:
         """Do whatever functions it takes to end the preview stream"""
         pass
 
+    #-----------------------------------------------------------#
+    @abstractmethod
+    def setCaptureResolution(self, size):
+        """Set the maximum resolution of the photos to be taken"""
+        pass
+
 ####################################################################
 # PhotoboothCameraPi class                                         #
 ####################################################################
@@ -193,6 +199,9 @@ class PhotoboothCameraPi(AbstractPhotoboothCamera):
         stream.seek(0)
         self.imgList.append(Image.open(stream))
 
+    #-----------------------------------------------------#
+    def setCaptureResolution(self, size):
+        self.camera.resolution = size
 
 #################################################################
 # BasicCounddownOverlayFactory                                  #

@@ -15,6 +15,8 @@ Qt and Python Based photobooth applicaton for the Raspberry Pi 3 and PiCamera v2
 ## Roadmap
 * Configurable Color schemes
   * Match the colors to your event
+* Configurable EXIF data
+  * Add exif data to the images
 
 ## Dependencies
 ### Hardware
