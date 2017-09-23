@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+
+<PhotoTemplate 
+	xmlns="http://www.scottmckittrick.com/schema/PiBooth/PhotoTemplate"
+	>
+  <name>Wedding Rings Sample</name>
+  <description>Sample template from 99boothtemplates.com</description>
+  <!-- Preview Image-->
+  <previewImage src="WeddingRings-H-4P.jpg" />
+
+  <canvas width="1844" height="1240"  backgroundColor="#FFFFFF">
+    <backgroundPhoto src="background_blue.jpg" />
+
+    <foregroundPhoto src="overlay.png" />
+
+    <photos>
+      <photoSpec width="900" height="600"  x="80" y="148" rotation="0"/>
+      <photoSpec width="540" height="360" x="80" y="787" />
+      <photoSpec width="540" height="360" x="652" y="787" />
+      <photoSpec width="540" height="360" x="1224" y="787" />
+    </photos>
+  </canvas>
+
+</PhotoTemplate>

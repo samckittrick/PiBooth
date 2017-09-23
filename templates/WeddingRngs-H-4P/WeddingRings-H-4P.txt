@@ -1,0 +1,38 @@
+﻿Photo 1 top
+
+x=80
+y=148
+Width=900
+Height=600
+Rotation=0
+
+---
+
+Photo 2 bottom
+
+x=80
+y=787
+Width=540
+Height=360
+Rotation=0
+
+---
+
+Photo 3 bottom
+
+x=652
+y=787
+Width=540
+Height=360
+Rotation=0
+
+---
+
+Photo 4 bottom
+
+x=1224
+y=787
+Width=540
+Height=360
+Rotation=0
+

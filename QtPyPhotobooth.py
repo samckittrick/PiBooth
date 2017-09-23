@@ -19,10 +19,12 @@ import threading
 
 import yaml
 
+from PIL import ImageQt
+
 import PyQt5
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import QTimer,QObject, QSize, Qt
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon, QImage
 
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
@@ -41,6 +43,7 @@ class QtPyPhotobooth(QObject):
         SPLASH = 0
         TEMPLATE = 1
         PREVIEW = 2
+        RESULT = 3
 
     #-----------------------------------------------------------#    
     def __init__(self):
@@ -63,8 +66,10 @@ class QtPyPhotobooth(QObject):
         self.form.setupUi(self.mainWindow)
 
         #Start pulling references to important widgets
+        self.templateLabel = self.form.label
         self.stackedWidget = self.form.stackedWidget
         self.templateView = self.form.templateView
+        self.resultLabel = self.form.resultImageLabel
 
         #Configure the main window
         self.mainWindow.showFullScreen()
@@ -192,10 +197,9 @@ class QtPyPhotobooth(QObject):
     def onPhotosTaken(self, photoList):
         #Move to the processing page.
         self.camera.end_preview()
-        resultImage = self.processor.processImages(photoList)
-        resultImage.save("boothOutput.jpg")
-        print("photo saved")
-
+        self.resultImage = self.processor.processImages(photoList)
+        self.configureResultScreen()
+        self.__changeScreens(QtPyPhotobooth.Screens.RESULT)
     #---------------------------------------------------------#
     def onTemplateSelected(self, templateIndex):
         """Handle the event when the user selects a template. """
@@ -214,6 +218,22 @@ class QtPyPhotobooth(QObject):
         thread.start()
         self.processor = ImageProcessor(self.selectedTemplate)
 
+    #---------------------------------------------------------#
+    def configureResultScreen(self):
+        """Place the result image on the result screen."""
+        #take the image in question
+        imgQt = ImageQt.ImageQt(self.resultImage)
+        pixmap = QPixmap.fromImage(imgQt)
+        #detatch is required to keep a reference to the image as the imgQt object goes out of scope
+        pixmap.detach()
+
+        ######################################
+        #Figure out sizing and placement of the label.
+        #update main window ui to remove scaled component.
+        w = self.resultLabel.width()
+        h = self.resultLabel.height()
+        self.resultLabel.setPixmap(pixmap.scaled(w, h, Qt.KeepAspectRatio))
+        
     
 ####################################
 #Main function
