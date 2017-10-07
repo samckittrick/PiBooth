@@ -32,5 +32,11 @@ class LocalPhotoStorage:
     #---------------------------------------------------------------------------#
     def saveImage(self, image):
         """Save the image itself. Does not catch exceptions. The calling function should do so."""
+
+        print("Saving image")
+        if(not os.path.exists(self.storageLocation)):
+            os.makedirs(self.storageLocation)
+        
         filename = self.__generateCollisionResistantName("jpg")
+        print("Filename: " + filename)
         image.save(self.storageLocation + os.path.sep + filename)

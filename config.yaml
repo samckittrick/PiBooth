@@ -33,8 +33,8 @@ overlayOptions:
 # Image Delivery Methods
 # -LocalSave
 delivery: 
-   - LocalSave
-      directory: "<path to save dir>"
+   - LocalSave:
+      directory: "/home/pi/Pictures/QtPyPhotobooth"
    - shutterfly:
       key: options1
       username: option2

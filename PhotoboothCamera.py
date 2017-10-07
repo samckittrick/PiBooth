@@ -36,6 +36,7 @@ class AbstractPhotoboothCamera:
         """Reset the state machine to the base state"""
         self.currentCountdown = self.countDownLength
         self.displayImage = False
+        self.imgList = list()
 
     #-----------------------------------------------------------#
     def capturePhotos(self, numPhotos, callback):

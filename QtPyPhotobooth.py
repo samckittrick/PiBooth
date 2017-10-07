@@ -29,7 +29,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon, QImag
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
 from PhotoboothTemplate import TemplateManager, ImageProcessor
-from PhotoboothDelivery import LocalSave
+from PhotoboothDelivery import LocalPhotoStorage
 
 ################################################################
 # QtPyPhotobooth Class                                         #
@@ -45,11 +45,15 @@ class QtPyPhotobooth(QObject):
         TEMPLATE = 1
         PREVIEW = 2
         RESULT = 3
+        SAVING = 4
+        SAVED = 5
 
     #-----------------------------------------------------------#    
     def __init__(self):
         """QtPyPhotobooth constructor. 
         Takes no Arguments."""
+
+        super(QtPyPhotobooth, self).__init__()
 
         #initialise some members
         self.resourcePath = "." + os.path.sep + "res"
@@ -67,10 +71,16 @@ class QtPyPhotobooth(QObject):
         self.form.setupUi(self.mainWindow)
 
         #Start pulling references to important widgets
-        self.templateLabel = self.form.label
+        self.templateLabel = self.form.templateSelectLabel
         self.stackedWidget = self.form.stackedWidget
         self.templateView = self.form.templateView
         self.resultLabel = self.form.resultImageLabel
+        self.saveButton = self.form.SaveButton
+        self.cancelButton = self.form.CancelButton
+
+        #configure some buttons
+        self.cancelButton.clicked.connect(lambda: self.onCancelButtonClicked())
+        self.saveButton.clicked.connect(lambda: self.onSaveButtonClicked())
 
         #Configure the main window
         self.mainWindow.showFullScreen()
@@ -92,6 +102,8 @@ class QtPyPhotobooth(QObject):
         #configure delivery mechanisms
         self.__configureDelivery()
 
+        
+        self.__changeScreens(QtPyPhotobooth.Screens.SPLASH)
         self.mainWindow.show()
 
         #Show the splash screen for a specific amount of time before moving on.
@@ -109,19 +121,19 @@ class QtPyPhotobooth(QObject):
     #-----------------------------------------------------------#
     def __configureDelivery(self):
 
-        self.deliveryList = list()
+        self.deliveryList = dict()
         if('delivery' in self.config):
             deliveryConfig = self.config['delivery']
         else:
            print("Warning: No delivery mechanisms configured. No images will be saved.")
 
-        for method in deliveryList:
+        for method in deliveryConfig:
             methodName = list(method.keys())[0]
             if(methodName == 'LocalSave'):
                 print("LocalSave configured")
-                if('directory' in method['methodName']):
+                if('directory' in method[methodName]):
                     directory = method[methodName]['directory']
-                    deliveryList.append(LocalSave(directory))
+                    self.deliveryList['LocalSave'] = LocalPhotoStorage(directory)
                 else:
                     print("No directory specified. Not adding LocalSave to delivery mechanisms")
                     continue
@@ -188,6 +200,7 @@ class QtPyPhotobooth(QObject):
     #-----------------------------------------------------------#
     def __changeScreens(self, screen):
         """Changes the screens on the gui to the selected screen"""
+        print("Changing Screens: " + str(screen))
         self.stackedWidget.setCurrentIndex(screen.value)
 
     #-----------------------------------------------------------#
@@ -227,7 +240,7 @@ class QtPyPhotobooth(QObject):
         self.resultImage = self.processor.processImages(photoList)
         self.configureResultScreen()
         self.__changeScreens(QtPyPhotobooth.Screens.RESULT)
-        #execute delivery mechanisms
+        
 
     #---------------------------------------------------------#
     def onTemplateSelected(self, templateIndex):
@@ -260,8 +273,44 @@ class QtPyPhotobooth(QObject):
         #Figure out sizing and placement of the label.
         #update main window ui to remove scaled component.
         w = self.resultLabel.width()
+        print("Width: " + str(w))
         h = self.resultLabel.height()
+        print("Height: " + str(h))
         self.resultLabel.setPixmap(pixmap.scaled(w, h, Qt.KeepAspectRatio))
+
+    #-----------------------------------------------------------------------#
+    def onCancelButtonClicked(self):
+        """Whenever a cancel button is clicked, go back to the beginning."""
+        self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE)
+
+    #-----------------------------------------------------------------------#
+    def onSaveButtonClicked(self):
+        """Handle the action of saving or sending the photo through a specific delivery mechanism."""
+        self.__changeScreens(QtPyPhotobooth.Screens.SAVING)
+        
+        thread = threading.Thread(target=self.savePhoto, args=(self.onPhotoSaved,))
+        thread.start()
+
+    #-----------------------------------------------------------------------#
+    def savePhoto(self, callback):
+        """Process all the save methods"""
+        
+        if('LocalSave' in self.deliveryList):
+            print("Saving to local disk.")
+            self.deliveryList['LocalSave'].saveImage(self.resultImage)
+
+        callback()
+
+    #-----------------------------------------------------------------------#
+    def onPhotoSaved(self):
+        """Update the gui to indicate that the photo has been saved."""
+        self.__changeScreens(QtPyPhotobooth.Screens.SAVED)
+         #Show the saved screen for a specific amount of time before moving on.
+         #We are using time because this is run in a separate thread from the ui thread.
+        time.sleep(self.splashTime/1000)
+        self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE)
+
+        
         
     
 ####################################
