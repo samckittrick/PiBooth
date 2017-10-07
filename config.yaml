@@ -21,9 +21,20 @@ cameraType: "RPI2"
 # 'Basic' - Basic count down overlay. See documentation for parameters.
 overlay: "Basic"
 
-# Overlay options - Options specific to the chosen 
+# Overlay options - Options specific to the chosen overlay
+#
+# For Basic overlay(example):
+#  overlayOptions:
+#     find: "<path to font>"
+#     color: "#<hex color value>"
 overlayOptions:
-#   font: "<path to font>"
    color: "#0033cc"
    
-   
+# Image Delivery Methods
+# -LocalSave
+delivery: 
+   - LocalSave
+      directory: "<path to save dir>"
+   - shutterfly:
+      key: options1
+      username: option2

@@ -29,6 +29,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon, QImag
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
 from PhotoboothTemplate import TemplateManager, ImageProcessor
+from PhotoboothDelivery import LocalSave
 
 ################################################################
 # QtPyPhotobooth Class                                         #
@@ -88,6 +89,9 @@ class QtPyPhotobooth(QObject):
         self.__configureTemplates()
         self.__configureTemplateView()
 
+        #configure delivery mechanisms
+        self.__configureDelivery()
+
         self.mainWindow.show()
 
         #Show the splash screen for a specific amount of time before moving on.
@@ -101,6 +105,29 @@ class QtPyPhotobooth(QObject):
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE))
         self.timer.start()
+
+    #-----------------------------------------------------------#
+    def __configureDelivery(self):
+
+        self.deliveryList = list()
+        if('delivery' in self.config):
+            deliveryConfig = self.config['delivery']
+        else:
+           print("Warning: No delivery mechanisms configured. No images will be saved.")
+
+        for method in deliveryList:
+            methodName = list(method.keys())[0]
+            if(methodName == 'LocalSave'):
+                print("LocalSave configured")
+                if('directory' in method['methodName']):
+                    directory = method[methodName]['directory']
+                    deliveryList.append(LocalSave(directory))
+                else:
+                    print("No directory specified. Not adding LocalSave to delivery mechanisms")
+                    continue
+            else:
+                print("Unknown delivery mechanism. Not adding")
+                continue
 
     #-----------------------------------------------------------#
     def __configureCamera(self):
@@ -200,6 +227,8 @@ class QtPyPhotobooth(QObject):
         self.resultImage = self.processor.processImages(photoList)
         self.configureResultScreen()
         self.__changeScreens(QtPyPhotobooth.Screens.RESULT)
+        #execute delivery mechanisms
+
     #---------------------------------------------------------#
     def onTemplateSelected(self, templateIndex):
         """Handle the event when the user selects a template. """
