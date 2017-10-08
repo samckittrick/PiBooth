@@ -76,6 +76,7 @@ Qt-Py Photobooth supports configurable photo templates that allows you to provid
 All templates should have a template.xml file that details information about the template. The example template should have sufficient comment information to explain the different configuration options.
 
 **Image Generation Process**
+
 Once the images are taken by the photobooth, the following steps are followed to place them in the template an generate the result imamge.
 
 1. Create image canvas of the configured size and color
