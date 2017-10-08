@@ -71,7 +71,7 @@ Qt-Py Photobooth supports configurable photo templates that allows you to provid
             |---> background.jpg
             |---> foreground.png
             +---> previewimg.jpg
-'''
+```
 
 All templates should have a template.xml file that details information about the template. The example template should have sufficient comment information to explain the different configuration options.
 
