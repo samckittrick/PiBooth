@@ -134,6 +134,9 @@ class Ui_MainWindow(object):
         self.NameLabel_3.setAlignment(QtCore.Qt.AlignCenter)
         self.NameLabel_3.setObjectName("NameLabel_3")
         self.stackedWidget.addWidget(self.page_6)
+        self.page_7 = QtWidgets.QWidget()
+        self.page_7.setObjectName("page_7")
+        self.stackedWidget.addWidget(self.page_7)
         MainWindow.setCentralWidget(self.centralWidget)
 
         self.retranslateUi(MainWindow)

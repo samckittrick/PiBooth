@@ -47,6 +47,7 @@ class QtPyPhotobooth(QObject):
         RESULT = 3
         SAVING = 4
         SAVED = 5
+        CONFIGURATION = 6
 
     #-----------------------------------------------------------#    
     def __init__(self):

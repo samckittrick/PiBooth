@@ -46,11 +46,13 @@ overlayOptions:
 #    - LocalSave - Save the resultant images to a location on the SD Card
 #       - directory - The directory to save the images to.
 #
-#    - shutterfly - Upload the images to shutterfly (Not yet implemented)
+#    - shutterfly - Upload the images to shutterfly
+#       - authFile - the file that contains the authentication information.
 ###########################################################################
 delivery: 
    - LocalSave:
       directory: "/home/pi/Pictures/QtPyPhotobooth"
    - shutterfly:
-      key: options1
-      username: option2
+      appId: "<app id>"
+      userId: "user@shutterfly.com"
+      

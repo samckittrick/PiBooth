@@ -27,7 +27,7 @@
      <enum>Qt::LeftToRight</enum>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>6</number>
     </property>
     <widget class="QWidget" name="page">
      <widget class="QWidget" name="gridLayoutWidget">
@@ -252,6 +252,7 @@
       </property>
      </widget>
     </widget>
+    <widget class="QWidget" name="page_7"/>
    </widget>
   </widget>
  </widget>
