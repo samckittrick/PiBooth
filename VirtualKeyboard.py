@@ -7,8 +7,9 @@ Classes Contained:
 """
 import os
 import PyQt5
-from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QGridLayout, QSizePolicy
-from PyQt5.QtCore import pyqtSignal, QSize, Qt
+from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QGridLayout, QSizePolicy, QLineEdit
+from PyQt5.QtCore import pyqtSignal, QSize, Qt, QEvent
+from PyQt5.QtGui import QKeyEvent, QGuiApplication
 from abc import ABC, ABCMeta, abstractmethod
 
 #######################################################################################
@@ -51,7 +52,8 @@ class BasicAmericanKeyboard(QWidget):
                 colspan = key[5]
                 #Create Key Widget
                 newKey = BasicKeyWidget(key[2], key[3], rowHeight, colWidth * colspan + self.hSpace * (colspan - 1))
-
+                newKey.setFocusPolicy(Qt.NoFocus)
+                
                 #Connect Signals
                 #if This is a special key, use the special handler
                 if(key[0] > 0):
@@ -67,7 +69,7 @@ class BasicAmericanKeyboard(QWidget):
     #------------------------------------------------------------------------------------#
     def handleNormalKey(self, keyId):
         """Handle normal keys whose key codes are recognized by QT. """
-        print("Normal Key Pressed.")
+        self.postKeyToGui(keyId, self.getValByKeyId(keyId))
 
     #------------------------------------------------------------------------------------#
     def handleSpecialKey(self, keyId):
@@ -80,6 +82,38 @@ class BasicAmericanKeyboard(QWidget):
             self.capState = not self.capState
             self.shiftState = self.capState
             self.sigShiftStateChanged.emit()
+        elif(keyId == BasicAmericanKeyboard.Key_DotCom):
+            #keycode 0 is "not a result of a known key; for example, it may be the result of a compose sequence or keyboard macro."
+            self.postKeyToGui(0, '.com')
+        elif(keyId == Qt.Key_Space):
+            self.postKeyToGui(keyId, " ")
+        elif(keyId == Qt.Key_Enter):
+            self.postKeyToGui(keyId, '')
+
+    #------------------------------------------------------------------------------------#
+    def postKeyToGui(self, keyCode, keyVal):
+        """Post a key to the gui so that the focused object can read it."""
+
+        modifier = Qt.ShiftModifier if self.shiftState else Qt.NoModifier
+        
+        pressEvent = QKeyEvent(QKeyEvent.KeyPress, keyCode, modifier, keyVal)
+        releaseEvent = QKeyEvent(QKeyEvent.KeyRelease, keyCode, modifier)
+        QGuiApplication.sendEvent(QGuiApplication.focusObject(), pressEvent)
+        QGuiApplication.sendEvent(QGuiApplication.focusObject(), releaseEvent)
+
+    #------------------------------------------------------------------------------------#
+    def getValByKeyId(self, keyId):
+        for line in self.keyList:
+            for key in line:
+                if(keyId == key[1]):
+                    if(self.shiftState and key[3] != ''):
+                        if(not self.capState):
+                            self.shiftState = False
+                            self.sigShiftStateChanged.emit()
+                        return key[3]
+                    else:
+                        return key[2]
+        
         
     #------------------------------------------------------------------------------------#
     def buildKeyMap(self):
@@ -88,7 +122,7 @@ class BasicAmericanKeyboard(QWidget):
         #Each key is a tuple as follows ( <specialKey>, <keycode>, <keyVal>, <shiftVal>, <rowspan>, <colSpan>)
         self.keyList = [
             #Row 1
-            [ (0, Qt.Key_Escape, 'esc', '', 1, 1),
+            [ (1, Qt.Key_Escape, 'esc', '', 1, 1),
               (0, Qt.Key_QuoteLeft, '`', '~', 1, 1),
               (0, Qt.Key_1, '1', '!', 1, 1),
               (0, Qt.Key_2, '2', '@', 1, 1),
@@ -104,10 +138,10 @@ class BasicAmericanKeyboard(QWidget):
               (0, Qt.Key_Equal, '=', '+', 1, 1),
               (0, Qt.Key_Backspace, '<-','', 1, 1) ],
             #Row 2
-            [ (0, Qt.Key_Tab, 'tab', '', 1, 2),
+            [ (1, Qt.Key_Tab, 'tab', '', 1, 2),
               (0, Qt.Key_Q, 'q', 'Q', 1, 1),
               (0, Qt.Key_W, 'w', 'W', 1, 1),
-              (0, Qt.Key_E, 'e', 'e', 1, 1),
+              (0, Qt.Key_E, 'e', 'E', 1, 1),
               (0, Qt.Key_R, 'r', 'R', 1, 1),
               (0, Qt.Key_T, 't', 'T', 1, 1),
               (0, Qt.Key_Y, 'y', 'Y', 1, 1),
@@ -147,7 +181,7 @@ class BasicAmericanKeyboard(QWidget):
             #Row 5
             [ (0, Qt.Key_At, '@', '', 1, 1),
               (1, BasicAmericanKeyboard.Key_DotCom, '.com', '', 1, 3),
-              (0, Qt.Key_Space, 'space', '', 1, 11 ) ] ]
+              (1, Qt.Key_Space, 'space', '', 1, 11 ) ] ]
 
 
         
@@ -192,6 +226,9 @@ if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
     #print("Starting application")
-    win = BasicAmericanKeyboard()
+    win = QWidget()
+    layout = QGridLayout(win)
+    layout.addWidget(QLineEdit(), 0, 0)
+    layout.addWidget(BasicAmericanKeyboard(), 1, 0)
     win.show()
     app.exec_()
