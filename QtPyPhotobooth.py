@@ -23,13 +23,15 @@ from PIL import ImageQt
 
 import PyQt5
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QTimer,QObject, QSize, Qt
+from PyQt5.QtCore import QTimer,QObject, QSize, Qt, QUrl
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon, QImage
+from PyQt5.QtWebKitWidgets import QWebView
 
 import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
 from PhotoboothTemplate import TemplateManager, ImageProcessor
 from PhotoboothDelivery import LocalPhotoStorage
+from VirtualKeyboard import BasicAmericanKeyboard
 
 ################################################################
 # QtPyPhotobooth Class                                         #
@@ -78,6 +80,7 @@ class QtPyPhotobooth(QObject):
         self.resultLabel = self.form.resultImageLabel
         self.saveButton = self.form.SaveButton
         self.cancelButton = self.form.CancelButton
+        self.configPage = self.form.page_7
 
         #configure some buttons
         self.cancelButton.clicked.connect(lambda: self.onCancelButtonClicked())
@@ -89,6 +92,9 @@ class QtPyPhotobooth(QObject):
         print("Screen size: ")
         print("\tWidth: " + str(self.screenSize.width()))
         print("\tHeight: " + str(self.screenSize.height()))
+
+        #Configure the oauth page
+        self.__configureOauthPage()
 
         #Configure the camera
         self.__configureCamera()
@@ -116,7 +122,7 @@ class QtPyPhotobooth(QObject):
         self.timer = QTimer()
         self.timer.setInterval(self.splashTime)
         self.timer.setSingleShot(True)
-        self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE))
+        self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.CONFIGURATION))
         self.timer.start()
 
     #-----------------------------------------------------------#
@@ -233,6 +239,16 @@ class QtPyPhotobooth(QObject):
         self.templateView.setEditTriggers(QListView.NoEditTriggers)
         self.templateView.clicked.connect(lambda index: self.onTemplateSelected(index))
         self.templateView.setModel(self.templateModel)
+
+    #---------------------------------------------------------#
+    def __configureOauthPage(self):
+        layout = QVBoxLayout(self.configPage)
+        layout.setAlignment(Qt.AlignCenter)
+        self.configWebView = QWebView()
+        self.configWebView.load(QUrl("https://google.com"))
+        layout.addWidget(self.configWebView)
+
+        layout.addWidget(BasicAmericanKeyboard())
 
     #---------------------------------------------------------#
     def onPhotosTaken(self, photoList):

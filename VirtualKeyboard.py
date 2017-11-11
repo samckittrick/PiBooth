@@ -32,7 +32,7 @@ class BasicAmericanKeyboard(QWidget):
         self.shiftState = False
         self.keyboardName = "BasicAmericaKeyboard"
         #self.resDir = resDir + os.path.sep + self.KeyboardName
-
+        
         self.buildKeyMap()
         
         #begin setting up the widget
@@ -44,6 +44,7 @@ class BasicAmericanKeyboard(QWidget):
         self.vSpace = 10
         self.keyLayout.setHorizontalSpacing(self.hSpace)
         self.keyLayout.setVerticalSpacing(self.vSpace)
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
         
         for lineIndex, line in enumerate(self.keyList):
             keyIndex = 0

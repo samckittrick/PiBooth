@@ -37,8 +37,10 @@ The following information details how to install and configure Qt-Py Photobooth.
 * qt5-default
 * python3-pyqt5
 * python3-pyqt5.qtmultimedia
+* python3-pyqt5.qtwebkit
 * libqt5multimedia5-plugins
 * PyYaml (installed via pip3)
+* Pytz (installed via pip3)
 
 ### Getting QtPyPhotobooth
 Use git to download the repository or download and unzip on the raspberry pi.
