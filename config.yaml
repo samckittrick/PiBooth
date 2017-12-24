@@ -14,6 +14,12 @@ templateDir: "./templates"
 #                    before moving on to tempalte selection 
 splashScreenTime: 1000
 
+# cacheLocation - The location where the photobooth saves application data
+#                 such as authentication tokens, etc. By default this is the
+#                 current working directory, but this item can be used to
+#                 change it. (Not Implemented Yet)
+#cacheLocation: "/home/pi/.QtPyPhotobooth"
+
 ############################################################################
 # Camera Settings
 ############################################################################
@@ -47,10 +53,14 @@ overlayOptions:
 #       - directory - The directory to save the images to.
 #
 #    - shutterfly - Upload the images to shutterfly (Not yet implemented)
+#
+#    - GooglePhotos - Upload photos to Google Photos
+#       - clientId  - The client ID provided by the google developer console
+#	- clientSecret - the client secret provided by the google developer console
 ###########################################################################
 delivery: 
    - LocalSave:
       directory: "/home/pi/Pictures/QtPyPhotobooth"
-   - shutterfly:
-      key: options1
-      username: option2
+   - GooglePhotos:
+      clientId: "clientId"
+      clientSecret: "clientSecret"
