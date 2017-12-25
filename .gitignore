@@ -2,4 +2,5 @@
 __pycache__
 \#*\#
 \.\#*
-testGDataOauth.py
+credentials.json
+testToken.txt
