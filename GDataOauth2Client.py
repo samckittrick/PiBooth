@@ -144,21 +144,27 @@ To initialize the client you need the following information:
         #Create post data
         postData = {'client_id': self.clientId, 'scope': scopeString } 
         postFields = urlencode(postData)
-        
-        #Call curl here
-        buffer = BytesIO()
-        c = pycurl.Curl()
-        c.setopt(c.URL, self.authServer)
-        c.setopt(c.POSTFIELDS, postFields)
-        c.setopt(c.WRITEDATA, buffer)
-        c.perform()
+        try:
+            #Call curl here
+            buffer = BytesIO()
+            c = pycurl.Curl()
+            c.setopt(c.URL, self.authServer)
+            c.setopt(c.POSTFIELDS, postFields)
+            c.setopt(c.WRITEDATA, buffer)
+            c.perform()
 
-        body = buffer.getvalue()
+            body = buffer.getvalue()
 
-        responsecode = c.getinfo(c.RESPONSE_CODE)
-        reqResp = json.loads(body.decode('iso-8859-1'))
+            responsecode = c.getinfo(c.RESPONSE_CODE)
+            reqResp = json.loads(body.decode('iso-8859-1'))
 
-        c.close()
+        except pycurl.error as err:
+            msgData = { 'error_code': self.GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
+            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            return
+        finally:
+            c.close()
+            
         #Start handling the response.
         if(responsecode == 200):
             msgData = { 'user_code': reqResp['user_code'],
@@ -198,14 +204,20 @@ To initialize the client you need the following information:
 
             buffer = BytesIO()
             c = pycurl.Curl()
-            c.setopt(c.URL, self.pollServer)
-            c.setopt(c.POSTFIELDS, postFields)
-            c.setopt(c.WRITEDATA, buffer)
-            c.perform()
+            try:
+                c.setopt(c.URL, self.pollServer)
+                c.setopt(c.POSTFIELDS, postFields)
+                c.setopt(c.WRITEDATA, buffer)
+                c.perform()
 
-            responsecode = c.getinfo(c.RESPONSE_CODE)
-            reqResp = json.loads(buffer.getvalue().decode('iso-8859-1'))
-            c.close()
+                responsecode = c.getinfo(c.RESPONSE_CODE)
+                reqResp = json.loads(buffer.getvalue().decode('iso-8859-1'))
+            except pycurl.error as err:
+                msgData = { 'error_code': self.GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
+                self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+                return
+            finally:
+                c.close()
             
             if(responsecode == 200):
                 keepPolling = False
@@ -244,15 +256,24 @@ To initialize the client you need the following information:
                      'grant_type': self.refreshGrantType }
         postFields = urlencode(postData)
 
+        
         buffer = BytesIO()
         c = pycurl.Curl()
-        c.setopt(c.URL, self.refreshServer)
-        c.setopt(c.POSTFIELDS, postFields)
-        c.setopt(c.WRITEDATA, buffer)
-        c.perform()
+        try:
+            c.setopt(c.URL, self.refreshServer)
+            c.setopt(c.POSTFIELDS, postFields)
+            c.setopt(c.WRITEDATA, buffer)
+            c.perform()
+            
+            responsecode = c.getinfo(c.RESPONSE_CODE)
+            reqResp = json.loads(buffer.getvalue().decode('iso-8859-1'))
+        except pycurl.error as err:
+            msgData = { 'error_code': self.GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
+            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            return
+        finally:
+            c.close()
 
-        responsecode = c.getinfo(c.RESPONSE_CODE)
-        reqResp = json.loads(buffer.getvalue().decode('iso-8859-1'))
 
         if(responsecode == 200):
             expiration = int(time.time()) + int(reqResp['expires_in'])
