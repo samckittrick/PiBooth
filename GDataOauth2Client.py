@@ -13,6 +13,9 @@ OAuth2DeviceClient - The main OAuth 2.0 client
 OAuth2DeviceClient.MessageTypes - Messages that the OAuth2DeviceClient can send.
 OAuth2Deviceclient.GDataAuthError - Error types that this application can return.
 OAuth2Token - A serializable class representing a generic Google OAuth2 Token
+
+Dependencies:
+pycurl
 """
 
 from enum import Enum
@@ -56,35 +59,42 @@ To initialize the client you need the following information:
     msgType is an enumerated type as defined by MessageTypes
     msgData is a variable set of data depending on the defined method type.
 
-    Message Type definitions:
-       MSG_OAUTH_FAILED: 
-          Represents various failure conditions
-          Example Data format (Note: Error string may not be user friendly.):
-             {
-                'error_code': <GDataOAuthError.ERR_CREDENTIALS: 3>,
-                'error_string': 'invalid_client'
-             }            
+Message Type definitions:
+   MSG_OAUTH_FAILED: 
+      Represents various failure conditions
+      Example Data format (Note: Error string may not be user friendly.):
+         {
+            'error_code': <GDataOAuthError.ERR_CREDENTIALS: 3>,
+            'error_string': 'invalid_client'
+         }            
       
-       MSG_VERIFICATION_REQUIRED:
-          Indicates that the application needs the user to grant permission. 
-          This is the time to display the verification url.
-          Example Data format:
-             {
-                'verification_url': 'https://www.google.com/device', 
-                'expires_in': 1800, 
-                'user_code': 'DZDR-RHZF'
-             }
+   MSG_VERIFICATION_REQUIRED:
+      Indicates that the application needs the user to grant permission. 
+      This is the time to display the verification url.
+      Example Data format:
+         {
+            'verification_url': 'https://www.google.com/device', 
+            'expires_in': 1800, 
+            'user_code': 'DZDR-RHZF'
+         }
 
-       MSG_CLIENT_WAITING:
-          Indicates that the client has begun polling the server and is 
-          waiting for the user to grant permission.
-          Example Data Format:
-             <Empty set>
+   MSG_CLIENT_WAITING:
+      Indicates that the client has begun polling the server and is 
+      waiting for the user to grant permission.
+      Example Data Format:
+         <Empty set>
 
-       MSG_OAUTH_SUCCESS:
-          Indicates that the client has successfully authenticated to the google servers
-          Example Data Format:
-             <GDataOauth2Client.OAuth2Token object at 0x76a3d230>
+   MSG_OAUTH_SUCCESS:
+      Indicates that the client has successfully authenticated to the google servers
+      Example Data Format:
+         <GDataOauth2Client.OAuth2Token object at 0x76a3d230>
+
+Error Types:
+   ERR_UNKNOWN = 0 - Thrown for Errors that have not otherwise been identified
+   ERR_NETWORK = 1 - Thrown for network errors that prevent pycurl from contacting the server
+   ERR_PROTOCOL = 2 - Thrown for protocol errors that prevent successful communication
+   ERR_CREDENTIALS = 3 - Thrown if there is something wrong with the provided client ID or secret
+   ERR_AUTH_FAILED = 4 - Thrown if the user refuses to authorize a request.
 
 """
 
@@ -248,7 +258,7 @@ To initialize the client you need the following information:
 
     #----------------------------------------------------------------------------------------------------------------------------------------------#
     def refreshToken(self, token):
-        """Takes a token and gets a new accessToken for it. """
+        """Takes a GDataOauth2Client.OAuth2Token and gets a new accessToken for it. """
         
         postData = { 'refresh_token': token.refreshToken,
                      'client_id': self.clientId,
