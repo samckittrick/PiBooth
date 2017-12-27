@@ -1,8 +1,11 @@
 import GDataOauth2Client
 from GDataOauth2Client import OAuth2Token
+import GDataPicasaClient
 import sys
 from pathlib import Path
 import json
+import pycurl
+from io import BytesIO
 
 #initialize variables
 token = None
@@ -11,6 +14,7 @@ credentialsFilename = ""
 clientSecret = ""
 clientId = ""
 scopes = [ "https://picasaweb.google.com/data/" ]
+api = GDataPicasaClient.PicasaClient()
 
 #Callback for oauth calls
 def oAuthCallback(msgType, params):
@@ -24,6 +28,19 @@ def oAuthCallback(msgType, params):
         tokenFile = tokenPath.open(mode="w+")
         tokenFile.write(OAuth2Token.serializeToken(token))
         tokenFile.close()
+
+#Callback for albumList calls
+def albumListCallback(msgType, params):
+    print(msgType)
+    if(msgType == GDataPicasaClient.MessageTypes.MSG_SUCCESS):
+        i = 1
+        for album in params:
+            print(str(i) + ") " + album['title'])
+            i += 1
+        select = input("Select an album: ")
+
+        api.getPhotoList(params[int(select) - 1]['albumId'], token, lambda m,d: print("Msg: " + str(m) + " - " + str(d)))
+    
 
 #Check Arguments
 if(len(sys.argv) < 3):
@@ -55,4 +72,8 @@ if(tokenPath.is_file()):
 else:
     client.requestAuthorization()
     
+
+
+#Test picasa api
+api.getAlbumList(token, albumListCallback)
 
