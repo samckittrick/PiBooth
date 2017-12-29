@@ -19,8 +19,6 @@ api = GDataPicasaClient.PicasaClient()
 
 #Callback for oauth calls
 def oAuthCallback(msgType, params):
-    print("Message type: " + str(msgType))
-    print("Message Params: \n" + str(params))
 
     if(msgType == GDataOauth2Client.OAuth2DeviceClient.MessageTypes.MSG_OAUTH_SUCCESS):
         global token
@@ -32,7 +30,6 @@ def oAuthCallback(msgType, params):
 
 #Callback for albumList calls
 def albumListCallback(msgType, params):
-    print(msgType)
     if(msgType == GDataPicasaClient.MessageTypes.MSG_SUCCESS):
         i = 1
         for album in params:

@@ -29,7 +29,8 @@ from lxml.etree import QName
 class MessageTypes(Enum):
     """Message types for callbacks"""
     MSG_SUCCESS = 0
-    MSG_FAILED = 1;
+    MSG_FAILED = 1
+    MSG_PROGRESS = 2
 
 #####################################################################################################
 # PicasaErrors - Error codes for the callbacks                                                      #
@@ -88,7 +89,8 @@ class PicasaClient:
            Takes:
              token - OAuth Token
              callback - Callback to send list to.
-           Calls back with a list of dictionaries with album metadata: """
+           Calls back with a list of dictionaries with album metadata. Ex:
+           {'albumId': '10000000000000000', 'accessRights': 'protected', 'author': 'Scott McKittrick', 'title': 'Auto Backup'}"""
         url = self.picasaBaseURL + "/user/" + self.userId
         headers = [
             "GData-Version: " + self.gDataVersion,
@@ -112,7 +114,6 @@ class PicasaClient:
             c.close()
 
         if(responseCode == 200):
-            print("Parsing response")
             albumList = self.__parseAlbumList(rspStr)
             callback(MessageTypes.MSG_SUCCESS, albumList)
             
@@ -157,7 +158,6 @@ class PicasaClient:
             c.close()
 
         if(responseCode == 200):
-            print("Parsing response")
             print(rspStr.decode('iso-8859-1'))
         elif(responseCode == 400):
             msgData = { 'error_type': PicasaErrors.ERR_PROTOCOL, 'error_string': rspStr.decode('iso-8859-1') }
@@ -178,6 +178,13 @@ class PicasaClient:
              -albumId - The ID of the google photo album to send to.
              -token - The GDataOauth2Client.OAuth2Token to authorize the call
              -callback - The callback function for updates to be sent to.
+
+        Note: metadata is currently required.
+
+        Callback Messages :
+           MessageTypes.MSG_PROGRESS - Used to show transfer progress. Example data:
+              {'total': 587651, 'progress': 99070}
+           MessageTypes.MSG_SUCCESS - Indicates the upload was successful. Data is 'NoneType'
         """
         #Generate metadata to be sent
         xmlString = self.__generateMetadataXML(metadata)
@@ -203,6 +210,10 @@ class PicasaClient:
             c.setopt(c.WRITEDATA, buffer)
             c.setopt(c.HTTPHEADER, headers)
             c.setopt(c.HTTPPOST, data)
+
+            #Add progress updates
+            c.setopt(c.NOPROGRESS, False)
+            c.setopt(c.XFERINFOFUNCTION, lambda dt, dp, ut, up: callback(MessageTypes.MSG_PROGRESS, self.__makeProgressUpdate(dt, dp, ut, up))) 
             c.perform()
 
             responseCode = c.getinfo(c.RESPONSE_CODE)
@@ -225,7 +236,18 @@ class PicasaClient:
         else:
             msgData = { 'error_type': PicasaErrors.ERR_UNKNOWN, 'error_string': str(responseCode) + ": " + rspStr.deocde('iso-8859-1')}
             callback(MessageTypes.MSG_FAILED, msgData)
-        
+
+    #----------------------------------------------------------------------------------------------------#
+    def __makeProgressUpdate(self, download_total, download_progress, upload_total, upload_progress):
+        """Send a progress update to the gui. This function is used to format the update into the message format for this class"""
+        if(download_total > 0):
+            total = download_total
+            progress = download_progress
+        else:
+            total = upload_total
+            progress = upload_progress
+
+        return { 'total': total, 'progress': progress }
 
     #----------------------------------------------------------------------------------------------------#
     def __generateMetadataXML(self, metadata):
