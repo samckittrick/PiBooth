@@ -1,6 +1,7 @@
 import GDataOauth2Client
 from GDataOauth2Client import OAuth2Token
 import GDataPicasaClient
+from GDataPicasaClient import MetadataTags
 import sys
 from pathlib import Path
 import json
@@ -39,7 +40,11 @@ def albumListCallback(msgType, params):
             i += 1
         select = input("Select an album: ")
 
-        api.getPhotoList(params[int(select) - 1]['albumId'], token, lambda m,d: print("Msg: " + str(m) + " - " + str(d)))
+        metadata = {
+            MetadataTags.TAG_SUMMARY: "This is a summary",
+            MetadataTags.TAG_TITLE: "Title.jpg"
+        }
+        api.uploadPhoto("testimg.jpg" , metadata, params[int(select) - 1]['albumId'], token, lambda t,d: print("Type: " + str(t) + " - Data: " + str(d)))
     
 
 #Check Arguments
