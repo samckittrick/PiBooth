@@ -59,6 +59,9 @@ class QtPyPhotobooth(QObject):
         self.resourcePath = "." + os.path.sep + "res"
         self.defaultTemplateIcon = "defaultTemplateIcon.png"
         self.templateModel = None
+        #this is the list of services the image is saved to and their status
+        #format 2-Tuple (ServiceName, True (success)/False (failure))
+        self.saveList = list()
         
         print("Initializing configuration...")
         self.configFilename = "config.yaml"
@@ -121,7 +124,7 @@ class QtPyPhotobooth(QObject):
     #-----------------------------------------------------------#
     def __configureDelivery(self):
 
-        self.deliveryList = dict()
+        self.deliveryList = list()
         if('delivery' in self.config):
             deliveryConfig = self.config['delivery']
         else:
@@ -133,7 +136,7 @@ class QtPyPhotobooth(QObject):
                 print("LocalSave configured")
                 if('directory' in method[methodName]):
                     directory = method[methodName]['directory']
-                    self.deliveryList['LocalSave'] = LocalPhotoStorage(directory)
+                    self.deliveryList.append(LocalPhotoStorage(directory))
                 else:
                     print("No directory specified. Not adding LocalSave to delivery mechanisms")
                     continue
@@ -295,11 +298,23 @@ class QtPyPhotobooth(QObject):
     def savePhoto(self, callback):
         """Process all the save methods"""
         
-        if('LocalSave' in self.deliveryList):
-            print("Saving to local disk.")
-            self.deliveryList['LocalSave'].saveImage(self.resultImage)
-
+        for method in self.deliveryList:
+            print("Saving to " + method.getServiceName())
+            method.setUpdateHandler(self.updateHandler)
+            method.setCompleteHandler(self.completeHandler)
+            method.saveImage(self.resultImage)
         callback()
+
+    #-----------------------------------------------------------------------#
+    def updateHandler(self, serviceName, total, progress):
+        """ Handle upload/save events from the delivery method"""
+        print("Update: " + serviceName + " - " + str(progress) + "/" + total)
+
+    #-----------------------------------------------------------------------#
+    def completeHandler(self, serviceName, success):
+        """ Allows the delivery method to indicate that it has completed saving/uploading the photo"""
+        print("Save to " + serviceName + " " + ("successful." if success else  "failed."))
+        self.saveList.append((serviceName, success))
 
     #-----------------------------------------------------------------------#
     def onPhotoSaved(self):

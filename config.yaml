@@ -55,12 +55,12 @@ overlayOptions:
 #    - shutterfly - Upload the images to shutterfly (Not yet implemented)
 #
 #    - GooglePhotos - Upload photos to Google Photos
-#       - clientId  - The client ID provided by the google developer console
-#	- clientSecret - the client secret provided by the google developer console
+#       - credentialsFile - The json file that contains the application
+#                           as downloaded from the google developer console
 ###########################################################################
 delivery: 
    - LocalSave:
       directory: "/home/pi/Pictures/QtPyPhotobooth"
    - GooglePhotos:
-      clientId: "clientId"
-      clientSecret: "clientSecret"
+      credentialsFile: "credentials.json"
+      
