@@ -17,8 +17,10 @@ splashScreenTime: 1000
 # cacheLocation - The location where the photobooth saves application data
 #                 such as authentication tokens, etc. By default this is the
 #                 current working directory, but this item can be used to
-#                 change it. (Not Implemented Yet)
+#                 change it. 
 #cacheLocation: "/home/pi/.QtPyPhotobooth"
+#cacheLocation: "cache/files/"
+#cacheLocation: "~/path"
 
 ############################################################################
 # Camera Settings
@@ -57,6 +59,7 @@ overlayOptions:
 #    - GooglePhotos - Upload photos to Google Photos
 #       - credentialsFile - The json file that contains the application
 #                           as downloaded from the google developer console
+#	- imgSummary - A String to be sent as the Google Photos image summary
 ###########################################################################
 delivery: 
    - LocalSave:

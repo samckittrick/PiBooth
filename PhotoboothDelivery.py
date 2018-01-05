@@ -14,6 +14,14 @@ import math
 import os
 from abc import ABC, ABCMeta, abstractmethod
 
+import GDataOauth2Client
+from GDataOauth2Client import MessageTypes as GDOMessageTypes
+from GDataOauth2Client import OAuth2Token as GDOAuth2Token
+from GDataOauth2Client import GDataOAuthError
+import json
+from pathlib import Path
+from enum import Enum
+
 ########################################################################
 # AbstractPhotoboothDelivery Class                                     #
 ########################################################################
@@ -100,3 +108,96 @@ class LocalPhotoStorage(AbstractPhotoboothDelivery):
     #---------------------------------------------------------------------------#
     def getServiceName(self):
         return self.serviceName
+
+#################################################################################
+# GooglePhotoStorage                                                            #
+#################################################################################
+class GooglePhotoStorage(AbstractPhotoboothDelivery):
+    """ Photobooth delivery class to send images to Google Photos """
+
+    class StatusMessage(Enum):
+        MSG_AUTH_REQUIRED = 0
+        MSG_AUTH_SUCCESS = 1
+        MSG_AUTH_FAILED = 2
+        MSG_ALBUM_LIST = 3
+        MSG_UPLOAD_STATUS = 4
+        MSG_UPLOAD_SUCCESS = 5
+        MSG_UPLOAD_FAILED = 6
+        
+    
+    #---------------------------------------------------------------------------#
+    def __init__(self, clientId, clientSecret, serializedToken,  imgSummary):
+        """Initialize the delivery mechanism. Caller should catch any exceptions generated from parsing json input"""
+
+        #Read in client credentials
+        self.clientId = clientId
+        self.clientSecret = clientSecret
+
+        self.token = None
+        if(serializedToken is not None):
+            try:
+                self.token = GDOAuth2Token.deserializeToken(serializedToken)
+            except Exception as e:
+                print("Warning: Invalid token supplied. - " + str(e))
+                print("Ignoring supplied token")
+
+        self.imgSummary = imgSummary
+        self.configCallback = None
+        self.scopeList = [ "https://picasaweb.google.com/data/" ]
+        self.albumList = None
+        self.albumListTime = 0
+
+        #Start setting up the clients
+        self.oAuthClient = GDataOauth2Client.OAuth2DeviceClient(self.clientId, self.clientSecret, self.scopeList, self.gDataOAuthCallback)
+
+    #---------------------------------------------------------------------------#
+    def gDataOAuthCallback(self, msgType, msgData):
+        """Internal callback for oauth calls"""
+        #If the server sends a verification code. 
+        if(msgType == GDOMessageTypes.MSG_VERIFICATION_REQUIRED):
+            self.configCallback(self.StatusMessage.MSG_AUTH_REQUIRED, msgData)
+        #if the authorization was successful
+        elif(msgType == GDOMessageTypes.MSG_OAUTH_SUCCESS):
+            #Successful requests return a token.
+            self.token = msgData
+            self.__saveToken()
+            
+            self.configCallback(self.StatusMessage.MSG_AUTH_SUCCESS, None)
+        #If there was an error
+        elif(msgType == GDOMessageTypes.MSG_OAUTH_FAILED):
+            #If the token presented caused an error, get a whole new token
+            if(((msgData['error_code'] == GDataOAuthError.ERR_CREDENTIALS) or (msgData['error_code'] == GDataOAuthError.ERR_PROTOCOL)) and (self.token is not None)):
+                print("Google refresh token failed, trying to get new token.")
+                self.oAuthClient.requestAuthorization()
+            #otherwise the error can't be recovered
+            else:
+                self.configCallback(self.StatusMessage.MSG_AUTH_FAILED, msgData['error_string'])
+        else:
+            print("Oauth Message: " + str(msgType))
+                
+    #---------------------------------------------------------------------------#
+    def __saveToken(self):
+        tFile = self.tPath.open('w')
+        tFile.write(GDOAuth2Token.serializeToken(self.token))
+        tFile.close()
+        
+    #---------------------------------------------------------------------------#
+    def getAccessToken(self):
+        """Take the current token and get a new one. 
+           If the token is missing or invalid callback with auth required. if authorization fails, callback with auth failed"""
+        if(self.token is not None):
+            self.oAuthClient.refreshToken(self.token)
+        else:
+            self.oAuthClient.requestAuthorization()
+        
+
+    #---------------------------------------------------------------------------#
+    def setAlbumId(self, albumId = None):
+        """ get the album id. Check against the list, if it doesn't match return album_list. Cache album list for future calls. cache timeout 30 seconds"""
+        pass
+
+    #---------------------------------------------------------------------------#
+    def setConfigurationCallback(self, callback):
+        """The callback for configuration actions. Prototype:
+           def callback(msgType, data) """
+        self.configCallback = callback

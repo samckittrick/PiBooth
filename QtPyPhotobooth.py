@@ -30,6 +30,9 @@ import mainwindow_auto
 from PhotoboothCamera import PhotoboothCameraPi, BasicCountdownOverlayFactory
 from PhotoboothTemplate import TemplateManager, ImageProcessor
 from PhotoboothDelivery import LocalPhotoStorage
+from PhotoboothDelivery import GooglePhotoStorage
+from pathlib import Path
+import json
 
 ################################################################
 # QtPyPhotobooth Class                                         #
@@ -67,6 +70,21 @@ class QtPyPhotobooth(QObject):
         self.configFilename = "config.yaml"
         f = open(self.configFilename, 'r')
         self.config = yaml.load(f)
+
+        #Get some configuration from the config file
+                #Show the splash screen for a specific amount of time before moving on.
+        if('splashScreenTime' in self.config):
+            self.splashTime = self.config['splashScreenTime']
+        else:
+            print("No Splash Screen Time specified. Defaulting to 5 seconds")
+            self.splashTime = 5000
+
+        if('cacheLocation' in self.config):
+            self.cacheLocation = os.path.normpath(os.path.abspath(os.path.expanduser(self.config['cacheLocation'])))
+        else:
+            print("No cache location provided using current working directory.")
+            self.cacheLocation = os.getcwd()
+        print("Cache Location: " + self.cacheLocation)
         
         print("Intializing  Gui...")
         self.form = mainwindow_auto.Ui_MainWindow()
@@ -109,12 +127,7 @@ class QtPyPhotobooth(QObject):
         self.__changeScreens(QtPyPhotobooth.Screens.SPLASH)
         self.mainWindow.show()
 
-        #Show the splash screen for a specific amount of time before moving on.
-        if('splashScreenTime' in self.config):
-            self.splashTime = self.config['splashScreenTime']
-        else:
-            print("No Splash Screen Time specified. Defaulting to 5 seconds")
-            self.splashTime = 5000
+
         self.timer = QTimer()
         self.timer.setInterval(self.splashTime)
         self.timer.setSingleShot(True)
@@ -123,6 +136,8 @@ class QtPyPhotobooth(QObject):
 
     #-----------------------------------------------------------#
     def __configureDelivery(self):
+
+        print("Configuring delivery mechanisms")
 
         self.deliveryList = list()
         if('delivery' in self.config):
@@ -140,9 +155,49 @@ class QtPyPhotobooth(QObject):
                 else:
                     print("No directory specified. Not adding LocalSave to delivery mechanisms")
                     continue
+            elif(methodName == 'GooglePhotos'):
+                print("GooglePhotos configured")
+                gphotoMethod = method[methodName]
+
+                #start parsing out parameters
+                if('credentialsFile' in gphotoMethod):
+                    credentialsFilename = os.path.normpath(os.path.abspath(os.path.expanduser(gphotoMethod['credentialsFile'])))
+                    try:
+                        credentialsFile = Path(credentialsFilename).open('r')
+                        credentialsJSON = json.loads(credentialsFile.read())
+                        clientId = credentialsJSON['installed']['client_id']
+                        clientSecret = credentialsJSON['installed']['client_secret']
+                        print("Google Photos credentials file found")
+                    except Exception as e:
+                        print("Warning: Error opening credentials file - " + str(e))
+                        print("Not adding Google Photos as delivery mechanism")
+                        continue
+                else:
+                    print("Warning: Google Photos configured but no credentials supplied. Not adding Google Photos to delivery mechanisms")
+                    continue
+
+                #Get the image summary to be sent to google photos with every image.
+                imgSummary = "Created with QtPyPhotobooth"
+                if('imgSummary' in gphotoMethod):
+                    imgSummary = gphotoMethod['imgSummary']
+
+                #Tokens from previous sessions should be loaded
+                tokenFilename = os.path.join(self.cacheLocation, "gphotoToken.txt")
+                serializedToken = None
+                try:
+                    tokenFile = Path(tokenFilename).open('r')
+                    serializedToken = tokenFile.read()
+                    print("Google Photos authentication token read")
+                except Exception as e:
+                    print("Warning: Error reading token file. - " + str(e))
+                    print("Token file may not exist or is not accessible. This may be expected. You Will need to start OAuth2 process")
+
+                self.deliveryList.append(GooglePhotoStorage(clientId, clientSecret, serializedToken, imgSummary))
+                
             else:
                 print("Unknown delivery mechanism. Not adding")
                 continue
+        sys.exit()
 
     #-----------------------------------------------------------#
     def __configureCamera(self):
@@ -193,10 +248,10 @@ class QtPyPhotobooth(QObject):
         """Get the template information from the config file and initialize the template manager"""
         print("Initializing Templates...")
         if('templateDir' in self.config):
-            self.templateDir = self.config['templateDir']
+            self.templateDir = os.path.normpath(os.path.abspath(os.path.expanduser(self.config['templateDir'])))
         else:
             print("No template directory specified. Defaulting to ./templates")
-            self.templateDir = "./templates"
+            self.templateDir = os.path.normpath(os.path.abspath("templates"))
             
         self.templateManager = TemplateManager(self.templateDir)
     

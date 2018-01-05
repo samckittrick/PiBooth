@@ -1,5 +1,6 @@
 import GDataOauth2Client
 from GDataOauth2Client import OAuth2Token
+from GDataOauth2Client import MessageTypes as GDOMessageTypes
 import GDataPicasaClient
 from GDataPicasaClient import MetadataTags
 import sys
@@ -20,7 +21,7 @@ api = GDataPicasaClient.PicasaClient()
 #Callback for oauth calls
 def oAuthCallback(msgType, params):
 
-    if(msgType == GDataOauth2Client.OAuth2DeviceClient.MessageTypes.MSG_OAUTH_SUCCESS):
+    if(msgType == GDOMessageTypes.MSG_OAUTH_SUCCESS):
         global token
         token = params
         tokenPath = Path(tokenFilename)

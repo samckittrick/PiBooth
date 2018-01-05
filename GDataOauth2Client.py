@@ -25,6 +25,30 @@ from urllib.parse import urlencode
 import json
 import time
 
+#######################################################################
+# MessageTypes                                                        #
+#######################################################################
+class MessageTypes(Enum):
+    """Enumerated list of message types that the client might send."""
+    #Sent if the client requires user verification.
+    MSG_VERIFICATION_REQUIRED = 0
+    #Sent if the client is waiting for verification and a response from the server
+    MSG_CLIENT_WAITING = 1
+    #Sent if the oauth was successful
+    MSG_OAUTH_SUCCESS = 2
+    #sent if the oauth failed.
+    MSG_OAUTH_FAILED = 3
+
+########################################################################
+# GDataOAuthError                                                      #
+########################################################################
+class GDataOAuthError(Enum):
+    ERR_UNKNOWN = 0
+    ERR_NETWORK = 1
+    ERR_PROTOCOL = 2
+    ERR_CREDENTIALS = 3
+    ERR_AUTH_FAILED = 4
+
 
 ############################################################################
 # OAuth2DeviceClient                                                       #
@@ -98,30 +122,6 @@ Error Types:
 
 """
 
-    #######################################################################
-    # MessageTypes                                                        #
-    #######################################################################
-    class MessageTypes(Enum):
-        """Enumerated list of message types that the client might send."""
-        #Sent if the client requires user verification.
-        MSG_VERIFICATION_REQUIRED = 0
-        #Sent if the client is waiting for verification and a response from the server
-        MSG_CLIENT_WAITING = 1
-        #Sent if the oauth was successful
-        MSG_OAUTH_SUCCESS = 2
-        #sent if the oauth failed.
-        MSG_OAUTH_FAILED = 3
-
-    ########################################################################
-    # GDataOAuthError                                                      #
-    ########################################################################
-    class GDataOAuthError(Enum):
-        ERR_UNKNOWN = 0
-        ERR_NETWORK = 1
-        ERR_PROTOCOL = 2
-        ERR_CREDENTIALS = 3
-        ERR_AUTH_FAILED = 4
-
     #----------------------------------------------------------------------#
     def __init__(self, clientId, clientSecret, scopeList, applicationCallback):
         """Initialize the device client
@@ -169,8 +169,8 @@ Error Types:
             reqResp = json.loads(body.decode('iso-8859-1'))
 
         except pycurl.error as err:
-            msgData = { 'error_code': self.GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
             return
         finally:
             c.close()
@@ -182,25 +182,25 @@ Error Types:
                         'expires_in': reqResp['expires_in'] }
             self.interval = reqResp['interval']
             self.deviceCode = reqResp['device_code']
-            self.applicationCallback(self.MessageTypes.MSG_VERIFICATION_REQUIRED, msgData)
+            self.applicationCallback(MessageTypes.MSG_VERIFICATION_REQUIRED, msgData)
             self.startPolling()
             
         elif(responsecode == 400):
-            msgData = { 'error_code': self.GDataOAuthError.ERR_PROTOCOL, 'error_string': reqResp['error'] }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_PROTOCOL, 'error_string': reqResp['error'] }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
         elif(responsecode == 401):
-            msgData = { 'error_code': self.GDataOAuthError.ERR_CREDENTIALS, 'error_string': reqResp['error'] }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_CREDENTIALS, 'error_string': reqResp['error'] }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
         else:
-            msgData = { 'error_code': self.GDataOAuthError.ERR_UNKNOWN, 'error_string': reqResp['error'] }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_UNKNOWN, 'error_string': reqResp['error'] }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
             
     #-----------------------------------------------------------------------------------------#
     def startPolling(self):
         """ Start polling to wait for the user to grant permission. """
 
         #Notify the GUI that we are polling
-        self.applicationCallback(self.MessageTypes.MSG_CLIENT_WAITING, {} )
+        self.applicationCallback(MessageTypes.MSG_CLIENT_WAITING, {} )
 
         keepPolling = True
         while(keepPolling):
@@ -223,8 +223,8 @@ Error Types:
                 responsecode = c.getinfo(c.RESPONSE_CODE)
                 reqResp = json.loads(buffer.getvalue().decode('iso-8859-1'))
             except pycurl.error as err:
-                msgData = { 'error_code': self.GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
-                self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+                msgData = { 'error_code': GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
+                self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
                 return
             finally:
                 c.close()
@@ -233,7 +233,7 @@ Error Types:
                 keepPolling = False
                 expiration = int(time.time()) + int(reqResp['expires_in'])
                 token = OAuth2Token(reqResp['refresh_token'], reqResp['token_type'], reqResp['access_token'], expiration)
-                self.applicationCallback(self.MessageTypes.MSG_OAUTH_SUCCESS, token)
+                self.applicationCallback(MessageTypes.MSG_OAUTH_SUCCESS, token)
             elif(responsecode == 400):
                 errorType = reqResp['error']
                 #The google api has combined legit errors with the "still waiting" response. Need to decide if it's an error or to just try again
@@ -241,20 +241,20 @@ Error Types:
                     print("Still waiting...")
                 else:
                     keepPolling = False
-                    msgData = { 'error_code': self.GDataOAuthError.ERR_PROTOCOL, 'error_string': reqResp['error'] + ": " + reqResp['error_description']}
-                    self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+                    msgData = { 'error_code': GDataOAuthError.ERR_PROTOCOL, 'error_string': reqResp['error'] + ": " + reqResp['error_description']}
+                    self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
             elif(responsecode == 403):
                 keepPolling = False
-                msgData = { 'error_code': self.GDataOAuthError.ERR_AUTH_FAILED, 'error_string': reqResp['error'] + ": User cancelled authorization" }
-                self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+                msgData = { 'error_code': GDataOAuthError.ERR_AUTH_FAILED, 'error_string': reqResp['error'] + ": User cancelled authorization" }
+                self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
             elif(responsecode == 429):
                 #if we are going too fast. add 2 seconds to the interval
                 print("Too fast, increasing interval..")
                 self.interval += 2
             else:
                 keepPolling = False
-                msgData = { 'error_code': self.GDataOAuthError.ERR_UNKNOWN, 'error_string': reqResp['error'] + ": " + reqResp['error_description'] }
-                self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+                msgData = { 'error_code': GDataOAuthError.ERR_UNKNOWN, 'error_string': reqResp['error'] + ": " + reqResp['error_description'] }
+                self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
 
     #----------------------------------------------------------------------------------------------------------------------------------------------#
     def refreshToken(self, token):
@@ -278,8 +278,8 @@ Error Types:
             responsecode = c.getinfo(c.RESPONSE_CODE)
             reqResp = json.loads(buffer.getvalue().decode('iso-8859-1'))
         except pycurl.error as err:
-            msgData = { 'error_code': self.GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_NETWORK, 'error_string': c.errstr() }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
             return
         finally:
             c.close()
@@ -290,16 +290,16 @@ Error Types:
             token.accessToken = reqResp['access_token']
             token.expiration = expiration
             token.tokenType =  reqResp['token_type']
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_SUCCESS, token);
+            self.applicationCallback(MessageTypes.MSG_OAUTH_SUCCESS, token);
         elif(responsecode == 401):
-            msgData = { 'error_code': self.GDataOAuthError.ERR_CREDENTIALS, 'error_string': reqResp['error'] }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_CREDENTIALS, 'error_string': reqResp['error'] }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
         elif(responsecode == 400):
-            msgData = { 'error_code': self.GDataOAuthError.ERR_PROTOCOL, 'error_string': reqResp['error'] + ": " + reqResp['error_description']}
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_PROTOCOL, 'error_string': reqResp['error'] + ": " + reqResp['error_description']}
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
         else:
-            msgData = { 'error_code': self.GDataOAuthError.ERR_UNKNOWN, 'error_string': reqResp['error'] + ": " + reqResp['error_description'] }
-            self.applicationCallback(self.MessageTypes.MSG_OAUTH_FAILED, msgData)
+            msgData = { 'error_code': GDataOAuthError.ERR_UNKNOWN, 'error_string': reqResp['error'] + ": " + reqResp['error_description'] }
+            self.applicationCallback(MessageTypes.MSG_OAUTH_FAILED, msgData)
 
 ####################################################################################################################################################
 # OAuth2 Token                                                                                                                                     #
