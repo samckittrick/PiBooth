@@ -110,6 +110,28 @@ class QtPyPhotobooth(QObject):
         print("\tWidth: " + str(self.screenSize.width()))
         print("\tHeight: " + str(self.screenSize.height()))
 
+        #Now is the time to start showing the splash screen. There will be several triggers that have
+        # to happen before the splash screen can change
+        #splash trigger count represents the number of items that need to be completed before the splash screen is changed
+        self.splashTriggerCount = 0
+        self.splashTriggerMutex = threading.Lock()
+
+        #Show the splash Screen
+        self.__changeScreens(QtPyPhotobooth.Screens.SPLASH)
+        self.mainWindow.show()
+
+        #Set the minimum time trigger
+        #Note: this is the minimum time because there may be other tasks to do before the splash changes.
+        self.__incrementSplashTriggerCount()
+        self.timer = QTimer()
+        self.timer.setInterval(self.splashTime)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.__decrementSplashTriggerCount)
+        self.timer.start()
+
+        #Add to the splash count for the rest of the configuration tasks
+        self.__incrementSplashTriggerCount()
+                                                
         #Configure the camera
         self.__configureCamera()
 
@@ -123,16 +145,25 @@ class QtPyPhotobooth(QObject):
         #configure delivery mechanisms
         self.__configureDelivery()
 
-        
-        self.__changeScreens(QtPyPhotobooth.Screens.SPLASH)
-        self.mainWindow.show()
+        #The tasks this function needs to complete before it returns have been completed or handed off to other threads
+        #It can now remove its trigger from the splash trigger count.
+        self.__decrementSplashTriggerCount()
 
+    #-----------------------------------------------------------#
+    def __incrementSplashTriggerCount(self):
+        self.splashTriggerMutex.acquire(True)
+        self.splashTriggerCount += 1
+        print("Splash Trigger Count is now: " + str(self.splashTriggerCount))
+        self.splashTriggerMutex.release()
 
-        self.timer = QTimer()
-        self.timer.setInterval(self.splashTime)
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(lambda : self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE))
-        self.timer.start()
+    #-----------------------------------------------------------#
+    def __decrementSplashTriggerCount(self):
+        self.splashTriggerMutex.acquire(True)
+        self.splashTriggerCount -= 1
+        print("Splash Trigger Count is now: " + str(self.splashTriggerCount))
+        if(self.splashTriggerCount is 0):
+            self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE)
+        self.splashTriggerMutex.release()
 
     #-----------------------------------------------------------#
     def __configureDelivery(self):
@@ -197,7 +228,6 @@ class QtPyPhotobooth(QObject):
             else:
                 print("Unknown delivery mechanism. Not adding")
                 continue
-        sys.exit()
 
     #-----------------------------------------------------------#
     def __configureCamera(self):

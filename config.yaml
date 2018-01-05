@@ -12,7 +12,7 @@ templateDir: "./templates"
 
 # splashScreenTime - The number of milliseconds to display the splash screen
 #                    before moving on to tempalte selection 
-splashScreenTime: 1000
+splashScreenTime: 5000
 
 # cacheLocation - The location where the photobooth saves application data
 #                 such as authentication tokens, etc. By default this is the
