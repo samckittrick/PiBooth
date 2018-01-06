@@ -30,6 +30,11 @@ from enum import Enum
 class AbstractPhotoboothDelivery(QObject):
     """Interface defining basic delivery mechanism functions. """
     __metaclass__ = ABCMeta
+
+    #---------------------------------------------------------------------------#
+    def __init__(self):
+        """Calls the QObject constructor"""
+        super().__init__()
     
     #---------------------------------------------------------------------------#
     @abstractmethod
@@ -125,12 +130,18 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
         MSG_UPLOAD_STATUS = 4
         MSG_UPLOAD_SUCCESS = 5
         MSG_UPLOAD_FAILED = 6
+
+    #PyQt Signals
+    OAuthMessageReceived = pyqtSignal(StatusMessage, object) 
         
     
     #---------------------------------------------------------------------------#
     def __init__(self, clientId, clientSecret, serializedToken,  imgSummary):
         """Initialize the delivery mechanism. Caller should catch any exceptions generated from parsing json input"""
 
+        #Call the parent constructor
+        super().__init__()
+        
         #Read in client credentials
         self.clientId = clientId
         self.clientSecret = clientSecret
@@ -157,13 +168,13 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
         """Internal callback for oauth calls"""
         #If the server sends a verification code. 
         if(msgType == GDOMessageTypes.MSG_VERIFICATION_REQUIRED):
-            self.configCallback(self.StatusMessage.MSG_AUTH_REQUIRED, msgData)
+            self.OAuthMessageReceived.emit(self.StatusMessage.MSG_AUTH_REQUIRED, msgData)
         #if the authorization was successful
         elif(msgType == GDOMessageTypes.MSG_OAUTH_SUCCESS):
             #Successful requests return a token.
             self.token = msgData
             
-            self.configCallback(self.StatusMessage.MSG_AUTH_SUCCESS, GDOAuth2Token.serializeToken(self.token))
+            self.OAuthMessageReceived.emit(self.StatusMessage.MSG_AUTH_SUCCESS, GDOAuth2Token.serializeToken(self.token))
         #If there was an error
         elif(msgType == GDOMessageTypes.MSG_OAUTH_FAILED):
             #If the token presented caused an error, get a whole new token
@@ -172,7 +183,7 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
                 self.oAuthClient.requestAuthorization()
             #otherwise the error can't be recovered
             else:
-                self.configCallback(self.StatusMessage.MSG_AUTH_FAILED, msgData['error_string'])
+                self.OAuthMessageReceived.emit(self.StatusMessage.MSG_AUTH_FAILED, msgData['error_string'])
         else:
             print("Oauth Message: " + str(msgType))
         

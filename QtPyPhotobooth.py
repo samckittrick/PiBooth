@@ -224,7 +224,7 @@ class QtPyPhotobooth(QObject):
                     print("Token file may not exist or is not accessible. This may be expected. You Will need to start OAuth2 process")
 
                 self.gPhotoDelivery = GooglePhotoStorage(clientId, clientSecret, serializedToken, imgSummary)
-                self.gPhotoDelivery.setConfigurationCallback(self.googlePhotosConfigCallback)
+                self.gPhotoDelivery.OAuthMessageReceived.connect(self.googlePhotosConfigCallback)
 
                 self.__incrementSplashTriggerCount()
                 mThread = threading.Thread(target=self.gPhotoDelivery.getAccessToken)
@@ -263,7 +263,7 @@ class QtPyPhotobooth(QObject):
             self.gPhotoMessageBox.done(1)
             self.gPhotoMessageBox = QMessageBox(self.mainWindow)
             self.gPhotoMessageBox.setText("Authorization Failed. Google Photos will not be added as a delivery mechanism.")
-            self.gPhotoMessageBox.show()
+            self.gPhotoMessageBox.exec_()
             self.__decrementSplashTriggerCount()
 
     #-----------------------------------------------------------#
@@ -274,6 +274,8 @@ class QtPyPhotobooth(QObject):
         winSize = self.mainWindow.size()
         mBox.setFixedSize(QSize(winSize.width()/2, winSize.height()/2))
         mBox.setModal(True)
+        mBox.setWindowTitle("Google Photos Authorization")
+        #mBox.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.FramelessWindowHint | Qt.Dialog)
 
         vLay = QVBoxLayout()
         vLay.setAlignment(Qt.AlignCenter)
