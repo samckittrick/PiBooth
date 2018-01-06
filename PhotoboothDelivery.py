@@ -14,6 +14,8 @@ import math
 import os
 from abc import ABC, ABCMeta, abstractmethod
 
+from PyQt5.QtCore import QObject, pyqtSignal
+
 import GDataOauth2Client
 from GDataOauth2Client import MessageTypes as GDOMessageTypes
 from GDataOauth2Client import OAuth2Token as GDOAuth2Token
@@ -25,7 +27,7 @@ from enum import Enum
 ########################################################################
 # AbstractPhotoboothDelivery Class                                     #
 ########################################################################
-class AbstractPhotoboothDelivery:
+class AbstractPhotoboothDelivery(QObject):
     """Interface defining basic delivery mechanism functions. """
     __metaclass__ = ABCMeta
     
@@ -160,9 +162,8 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
         elif(msgType == GDOMessageTypes.MSG_OAUTH_SUCCESS):
             #Successful requests return a token.
             self.token = msgData
-            self.__saveToken()
             
-            self.configCallback(self.StatusMessage.MSG_AUTH_SUCCESS, None)
+            self.configCallback(self.StatusMessage.MSG_AUTH_SUCCESS, GDOAuth2Token.serializeToken(self.token))
         #If there was an error
         elif(msgType == GDOMessageTypes.MSG_OAUTH_FAILED):
             #If the token presented caused an error, get a whole new token
@@ -174,12 +175,6 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
                 self.configCallback(self.StatusMessage.MSG_AUTH_FAILED, msgData['error_string'])
         else:
             print("Oauth Message: " + str(msgType))
-                
-    #---------------------------------------------------------------------------#
-    def __saveToken(self):
-        tFile = self.tPath.open('w')
-        tFile.write(GDOAuth2Token.serializeToken(self.token))
-        tFile.close()
         
     #---------------------------------------------------------------------------#
     def getAccessToken(self):

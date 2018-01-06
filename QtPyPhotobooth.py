@@ -223,11 +223,78 @@ class QtPyPhotobooth(QObject):
                     print("Warning: Error reading token file. - " + str(e))
                     print("Token file may not exist or is not accessible. This may be expected. You Will need to start OAuth2 process")
 
-                self.deliveryList.append(GooglePhotoStorage(clientId, clientSecret, serializedToken, imgSummary))
+                self.gPhotoDelivery = GooglePhotoStorage(clientId, clientSecret, serializedToken, imgSummary)
+                self.gPhotoDelivery.setConfigurationCallback(self.googlePhotosConfigCallback)
+
+                self.__incrementSplashTriggerCount()
+                mThread = threading.Thread(target=self.gPhotoDelivery.getAccessToken)
+                mThread.start()
                 
             else:
                 print("Unknown delivery mechanism. Not adding")
                 continue
+
+    #-----------------------------------------------------------#
+    def googlePhotosConfigCallback(self, msgType, data):
+        """Callback for configuring the google photos delivery mechanism. Since configuring it requires network calls, we use threads and callbacks to complete it."""
+
+        print("GData Config Callback: " + str(msgType) + " - " + str(data))
+        if(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_REQUIRED):
+            print("Google Photos OAuth2 Device Code received.")
+            self.gPhotoMessageBox = self.__buildGDataOAuthCodeDialog(data['user_code'], data['verification_url'])
+            self.gPhotoMessageBox.show()
+        elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_SUCCESS):
+            print("Token Received. Saving...")
+            try:
+                self.gPhotoMessageBox.done(1)
+                tokenFilename = os.path.join(self.cacheLocation, "gphotoToken.txt")
+                print("Temporarily Not Saving")
+                #tokenFile = Path(tokenFilename).open('w+')
+                #tokenFile.write(data)
+                #tokenFile.close()
+            except Exception as e:
+                print("Error saving token - " + str(e))
+                print("You will have to reauthorize next time this application is run.")
+                
+            print("time to get the album list")
+            self.__decrementSplashTriggerCount()
+        elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_FAILED):
+            print("Authorization Failed")
+            self.gPhotoMessageBox.done(1)
+            self.gPhotoMessageBox = QMessageBox(self.mainWindow)
+            self.gPhotoMessageBox.setText("Authorization Failed. Google Photos will not be added as a delivery mechanism.")
+            self.gPhotoMessageBox.show()
+            self.__decrementSplashTriggerCount()
+
+    #-----------------------------------------------------------#
+    def __buildGDataOAuthCodeDialog(self, code, verificationURL):
+        """Builds the custom dialog for showing the OAuth2 Device authorization code to the user."""
+        mBox = QDialog(self.mainWindow)
+        #mBox.setTitle("Google Photos OAuth Device Code")
+        winSize = self.mainWindow.size()
+        mBox.setFixedSize(QSize(winSize.width()/2, winSize.height()/2))
+        mBox.setModal(True)
+
+        vLay = QVBoxLayout()
+        vLay.setAlignment(Qt.AlignCenter)
+        vLay.addStretch(1)
+        l = QLabel("<h2>QtPy Photobooth needs permission to access your Google Photos account.<h2>")
+        l.setAlignment(Qt.AlignCenter)
+        l.setWordWrap(True)
+        vLay.addWidget(l)
+
+        vLay.addStretch(1)
+        l = QLabel("<h1>" + code + "<h1>")
+        l.setAlignment(Qt.AlignCenter)
+        vLay.addWidget(l)
+        vLay.addStretch()
+
+        l = QLabel("Please enter the code at the following URL: <br />" + verificationURL)
+        l.setAlignment(Qt.AlignCenter)
+        vLay.addWidget(l)
+        mBox.setLayout(vLay)
+        return mBox
+        
 
     #-----------------------------------------------------------#
     def __configureCamera(self):
