@@ -23,7 +23,7 @@ from PIL import ImageQt
 
 import PyQt5
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QTimer,QObject, QSize, Qt
+from PyQt5.QtCore import QTimer,QObject, QSize, Qt, pyqtSlot, QThread
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QPixmap, QIcon, QImage
 
 import mainwindow_auto
@@ -149,7 +149,11 @@ class QtPyPhotobooth(QObject):
         #It can now remove its trigger from the splash trigger count.
         self.__decrementSplashTriggerCount()
 
-    #-----------------------------------------------------------#
+
+
+
+
+        #-----------------------------------------------------------#
     def __incrementSplashTriggerCount(self):
         self.splashTriggerMutex.acquire(True)
         self.splashTriggerCount += 1
@@ -223,11 +227,14 @@ class QtPyPhotobooth(QObject):
                     print("Warning: Error reading token file. - " + str(e))
                     print("Token file may not exist or is not accessible. This may be expected. You Will need to start OAuth2 process")
 
+                #Get the AlbumId if there is one
+                self.gPhotoAlbumId = None
+
                 self.gPhotoDelivery = GooglePhotoStorage(clientId, clientSecret, serializedToken, imgSummary)
-                self.gPhotoDelivery.OAuthMessageReceived.connect(self.googlePhotosConfigCallback)
+                self.gPhotoDelivery.messageReceived.connect(self.googlePhotosConfigCallback)
 
                 self.__incrementSplashTriggerCount()
-                mThread = threading.Thread(target=self.gPhotoDelivery.getAccessToken)
+                mThread = threading.Thread(target=self.gPhotoDelivery.setAlbumId, args=[self.gPhotoAlbumId])
                 mThread.start()
                 
             else:
@@ -235,29 +242,35 @@ class QtPyPhotobooth(QObject):
                 continue
 
     #-----------------------------------------------------------#
+    @pyqtSlot(GooglePhotoStorage.StatusMessage, object)
     def googlePhotosConfigCallback(self, msgType, data):
         """Callback for configuring the google photos delivery mechanism. Since configuring it requires network calls, we use threads and callbacks to complete it."""
 
         print("GData Config Callback: " + str(msgType) + " - " + str(data))
+        if(msgType == self.gPhotoDelivery.StatusMessage.MSG_UNAUTHORIZED):
+            #If it is unauthorized, we need to refresh the token
+            mThread = threading.Thread(target=self.gPhotoDelivery.getAccessToken)
+            mThread.start()
         if(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_REQUIRED):
             print("Google Photos OAuth2 Device Code received.")
             self.gPhotoMessageBox = self.__buildGDataOAuthCodeDialog(data['user_code'], data['verification_url'])
-            self.gPhotoMessageBox.show()
+            self.gPhotoMessageBox.exec_()
         elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_SUCCESS):
             print("Token Received. Saving...")
             try:
                 self.gPhotoMessageBox.done(1)
                 tokenFilename = os.path.join(self.cacheLocation, "gphotoToken.txt")
-                print("Temporarily Not Saving")
-                #tokenFile = Path(tokenFilename).open('w+')
-                #tokenFile.write(data)
-                #tokenFile.close()
+                tokenFile = Path(tokenFilename).open('w+')
+                tokenFile.write(data)
+                tokenFile.close()
+                
             except Exception as e:
                 print("Error saving token - " + str(e))
                 print("You will have to reauthorize next time this application is run.")
-                
-            print("time to get the album list")
-            self.__decrementSplashTriggerCount()
+
+            #Lets try setting the albumId again
+            mThread = threading.Thread(target=self.gPhotoDelivery.setAlbumId, args=[self.gPhotoAlbumId])
+            mThread.start()
         elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_FAILED):
             print("Authorization Failed")
             self.gPhotoMessageBox.done(1)
@@ -265,6 +278,13 @@ class QtPyPhotobooth(QObject):
             self.gPhotoMessageBox.setText("Authorization Failed. Google Photos will not be added as a delivery mechanism.")
             self.gPhotoMessageBox.exec_()
             self.__decrementSplashTriggerCount()
+
+        elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_ALBUM_LIST):
+            print("Defaulting to a specific id")
+            self.gPhotoAlbumId = "1000000433900466"
+            mThread = threading.Thread(target=self.gPhotoDelivery.setAlbumId, args=[self.gPhotoAlbumId])
+            mThread.start()
+            
 
     #-----------------------------------------------------------#
     def __buildGDataOAuthCodeDialog(self, code, verificationURL):
@@ -478,10 +498,7 @@ class QtPyPhotobooth(QObject):
          #We are using time because this is run in a separate thread from the ui thread.
         time.sleep(self.splashTime/1000)
         self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE)
-
         
-        
-    
 ####################################
 #Main function
 ####################################

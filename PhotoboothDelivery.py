@@ -20,6 +20,8 @@ import GDataOauth2Client
 from GDataOauth2Client import MessageTypes as GDOMessageTypes
 from GDataOauth2Client import OAuth2Token as GDOAuth2Token
 from GDataOauth2Client import GDataOAuthError
+from GDataPicasaClient import PicasaClient, PicasaErrors
+from GDataPicasaClient import MessageTypes as PicasaMessageTypes
 import json
 from pathlib import Path
 from enum import Enum
@@ -128,11 +130,12 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
         MSG_AUTH_FAILED = 2
         MSG_ALBUM_LIST = 3
         MSG_UPLOAD_STATUS = 4
-        MSG_UPLOAD_SUCCESS = 5
-        MSG_UPLOAD_FAILED = 6
+        MSG_UNAUTHORIZED = 5
+        MSG_REQUEST_SUCCEEDED = 6
+        MSG_REQUEST_FAILED = 7
 
     #PyQt Signals
-    OAuthMessageReceived = pyqtSignal(StatusMessage, object) 
+    messageReceived = pyqtSignal(StatusMessage, object) 
         
     
     #---------------------------------------------------------------------------#
@@ -157,24 +160,27 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
         self.imgSummary = imgSummary
         self.configCallback = None
         self.scopeList = [ "https://picasaweb.google.com/data/" ]
-        self.albumList = None
-        self.albumListTime = 0
+        self.albumList = list()
+        self.albumListTime = 0 #time the album list was received. for cacheing purposes.
+        self.cacheTimeout = 60 #seconds until the cache is not valid anymore
+        self.albumId = None
 
         #Start setting up the clients
         self.oAuthClient = GDataOauth2Client.OAuth2DeviceClient(self.clientId, self.clientSecret, self.scopeList, self.gDataOAuthCallback)
+        self.picasaClient = PicasaClient()
 
     #---------------------------------------------------------------------------#
     def gDataOAuthCallback(self, msgType, msgData):
         """Internal callback for oauth calls"""
         #If the server sends a verification code. 
         if(msgType == GDOMessageTypes.MSG_VERIFICATION_REQUIRED):
-            self.OAuthMessageReceived.emit(self.StatusMessage.MSG_AUTH_REQUIRED, msgData)
+            self.messageReceived.emit(self.StatusMessage.MSG_AUTH_REQUIRED, msgData)
         #if the authorization was successful
         elif(msgType == GDOMessageTypes.MSG_OAUTH_SUCCESS):
             #Successful requests return a token.
             self.token = msgData
             
-            self.OAuthMessageReceived.emit(self.StatusMessage.MSG_AUTH_SUCCESS, GDOAuth2Token.serializeToken(self.token))
+            self.messageReceived.emit(self.StatusMessage.MSG_AUTH_SUCCESS, GDOAuth2Token.serializeToken(self.token))
         #If there was an error
         elif(msgType == GDOMessageTypes.MSG_OAUTH_FAILED):
             #If the token presented caused an error, get a whole new token
@@ -183,9 +189,31 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
                 self.oAuthClient.requestAuthorization()
             #otherwise the error can't be recovered
             else:
-                self.OAuthMessageReceived.emit(self.StatusMessage.MSG_AUTH_FAILED, msgData['error_string'])
+                self.messageReceived.emit(self.StatusMessage.MSG_AUTH_FAILED, msgData['error_string'])
         else:
             print("Oauth Message: " + str(msgType))
+
+    #---------------------------------------------------------------------------#
+    def gDataPhotoCallback(self, msgType, msgData):
+        """Internal callback for google photos calls"""
+        #print("Data callback : " + str(msgType) + " - " + str(msgData))
+        print("Handle refresh token, cache data, compare to current. emit correct signal")
+        if(msgType == PicasaMessageTypes.MSG_SUCCESS):
+            self.albumList = msgData
+            self.albumListTime = time.time()
+            #if the requested album id is correct
+            if(self.__checkAlbumId(self.requestedAlbumId)):
+                print("Album Id selected: " + self.requestedAlbumId)
+                self.albumId = self.requestedAlbumId
+                self.messageReceived.emit(self.StatusMessage.MSG_REQUEST_SUCCEEDED, None)
+            else:
+                self.messageReceived.emit(self.StatusMessage.MSG_ALBUM_LIST, self.albumList)
+                
+        elif(msgType == PicasaMessageTypes.MSG_FAILED):
+            if(msgData['error_type'] == PicasaErrors.ERR_UNAUTHORIZED):
+                self.messageReceived.emit(self.StatusMessage.MSG_UNAUTHORIZED, None)
+            else:
+                self.messageReceived.emit(self.StatusMessage.MSG_REQUEST_FAILED, msgData['error_string'])
         
     #---------------------------------------------------------------------------#
     def getAccessToken(self):
@@ -200,10 +228,29 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
     #---------------------------------------------------------------------------#
     def setAlbumId(self, albumId = None):
         """ get the album id. Check against the list, if it doesn't match return album_list. Cache album list for future calls. cache timeout 30 seconds"""
-        pass
 
-    #---------------------------------------------------------------------------#
-    def setConfigurationCallback(self, callback):
-        """The callback for configuration actions. Prototype:
-           def callback(msgType, data) """
-        self.configCallback = callback
+        #set the requested album ID
+        self.requestedAlbumId = albumId
+        
+        #get the album Id list if the cache is expired.
+        if((time.time() - self.albumListTime) > self.cacheTimeout):
+            self.picasaClient.getAlbumList(self.token, self.gDataPhotoCallback)
+        else:
+            #If the requested album Id is correct
+            print("Using cached list")
+            if(self.__checkAlbumId(self.requestedAlbumId)):
+                self.albumId = self.requestedAlbumId
+                self.messageReceived.emit(self.StatusMessage.MSG_REQUEST_SUCCEEDED, None)
+            else:
+                self.messageReceived.emit(self.StatusMessage.MSG_ALBUM_LIST, self.albumList)
+                
+
+    #--------------------------------------------------------------------------#
+    def __checkAlbumId(self, albumId):
+        """Check to see if the requested album Id is in the albumList"""
+        for album in self.albumList:
+            if(albumId == album['albumId']):
+                return True
+
+        #if we exit the loop, the requested id wasn't found
+        return False

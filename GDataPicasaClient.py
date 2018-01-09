@@ -92,9 +92,12 @@ class PicasaClient:
            Calls back with a list of dictionaries with album metadata. Ex:
            {'albumId': '10000000000000000', 'accessRights': 'protected', 'author': 'Scott McKittrick', 'title': 'Auto Backup'}"""
         url = self.picasaBaseURL + "/user/" + self.userId
-        headers = [
-            "GData-Version: " + self.gDataVersion,
-            "Authorization: Bearer " + token.accessToken]
+        if token is not None:
+            headers = [
+                "GData-Version: " + self.gDataVersion,
+                "Authorization: Bearer " + str(token.accessToken)]
+        else:
+            headers = [ "GData-Version: " + self.gDataVersion ]
 
         buffer = BytesIO()
         c = pycurl.Curl()
@@ -137,8 +140,9 @@ class PicasaClient:
         url = self.picasaBaseURL + "/user/" + self.userId + "/albumid/" + albumId
         print(url)
         headers = [
-            "GData-Version: " + self.gDataVersion,
-            "Authorization: Bearer " + token.accessToken]
+            "GData-Version: " + self.gDataVersion ]
+        if(self.token is not None):
+            headers.append("Authorization: Bearer " + str(token.accessToken))
 
         buffer = BytesIO()
         c = pycurl.Curl()
@@ -191,9 +195,11 @@ class PicasaClient:
 
         headers = [
             "GData-Version: " + self.gDataVersion,
-            "Authorization: Bearer " + token.accessToken,
             "Content-Type: multipart/related"
         ]
+
+        if self.token is not None:
+            headers.append("Authorization: Bearer " + str(token.accessToken))
 
         data = [
             ( 'metadata', (pycurl.FORM_CONTENTS, xmlString, pycurl.FORM_CONTENTTYPE, 'application/atom+xml')),
