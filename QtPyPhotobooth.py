@@ -62,6 +62,7 @@ class QtPyPhotobooth(QObject):
         self.resourcePath = "." + os.path.sep + "res"
         self.defaultTemplateIcon = "defaultTemplateIcon.png"
         self.templateModel = None
+        self.gPhotoMessageBox = None
         #this is the list of services the image is saved to and their status
         #format 2-Tuple (ServiceName, True (success)/False (failure))
         self.saveList = list()
@@ -234,7 +235,7 @@ class QtPyPhotobooth(QObject):
                 self.gPhotoDelivery.messageReceived.connect(self.googlePhotosConfigCallback)
 
                 self.__incrementSplashTriggerCount()
-                mThread = threading.Thread(target=self.gPhotoDelivery.setAlbumId, args=[self.gPhotoAlbumId])
+                mThread = threading.Thread(target=self.gPhotoDelivery.getAccessToken)
                 mThread.start()
                 
             else:
@@ -246,7 +247,7 @@ class QtPyPhotobooth(QObject):
     def googlePhotosConfigCallback(self, msgType, data):
         """Callback for configuring the google photos delivery mechanism. Since configuring it requires network calls, we use threads and callbacks to complete it."""
 
-        print("GData Config Callback: " + str(msgType) + " - " + str(data))
+        #print("GData Config Callback: " + str(msgType) + " - " + str(data))
         if(msgType == self.gPhotoDelivery.StatusMessage.MSG_UNAUTHORIZED):
             #If it is unauthorized, we need to refresh the token
             mThread = threading.Thread(target=self.gPhotoDelivery.getAccessToken)
@@ -258,7 +259,8 @@ class QtPyPhotobooth(QObject):
         elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_AUTH_SUCCESS):
             print("Token Received. Saving...")
             try:
-                self.gPhotoMessageBox.done(1)
+                if(self.gPhotoMessageBox is not None):
+                    self.gPhotoMessageBox.done(1)
                 tokenFilename = os.path.join(self.cacheLocation, "gphotoToken.txt")
                 tokenFile = Path(tokenFilename).open('w+')
                 tokenFile.write(data)
@@ -281,9 +283,19 @@ class QtPyPhotobooth(QObject):
 
         elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_ALBUM_LIST):
             print("Defaulting to a specific id")
-            self.gPhotoAlbumId = "1000000433900466"
+            self.gPhotoMessageBox = self.__buildGDataAlbumSelector(data)
+            self.gPhotoMessageBox.exec_()
+            print("Album Selected: " + self.gPhotoMessageBox.getSelected().text())
+            self.gPhotoAlbumId = self.gPhotoMessageBox.getSelected().data(Qt.UserRole)
             mThread = threading.Thread(target=self.gPhotoDelivery.setAlbumId, args=[self.gPhotoAlbumId])
             mThread.start()
+        elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_REQUEST_SUCCEEDED):
+            print("Google Photos Delivery Mechanism Configured. Adding...")
+            self.deliveryList.append(self.gPhotoDelivery)
+            self.__decrementSplashTriggerCount()
+        else:
+            print("Unknown error. Not Adding google photos to delivery list")
+            self.__decrementSplashTriggerCount()
             
 
     #-----------------------------------------------------------#
@@ -315,6 +327,25 @@ class QtPyPhotobooth(QObject):
         l.setAlignment(Qt.AlignCenter)
         vLay.addWidget(l)
         mBox.setLayout(vLay)
+        return mBox
+
+    #-----------------------------------------------------------#
+    def __buildGDataAlbumSelector(self, albumList):
+        """Builds the selection dialog for selecting an album"""
+        listLabel = "<h2>Please select an album to upload picture to</h2>"
+        itemList = list()
+        for album in albumList:
+            item = QListWidgetItem()
+            item.setText(album['title'])
+            item.setData(Qt.UserRole, album['albumId'])
+            itemList.append(item)
+        
+        mBox = QBasicListSelector(self.mainWindow, listLabel, itemList)
+        winSize = self.mainWindow.size()
+        mBox.setFixedSize(QSize(winSize.width()/2, winSize.height()/2))
+        mBox.setModal(True)
+        mBox.setWindowTitle("Google Photos Album Selection")
+        
         return mBox
         
 
@@ -498,6 +529,52 @@ class QtPyPhotobooth(QObject):
          #We are using time because this is run in a separate thread from the ui thread.
         time.sleep(self.splashTime/1000)
         self.__changeScreens(QtPyPhotobooth.Screens.TEMPLATE)
+
+####################################################################################
+# QBasicListSelector                                                               #
+####################################################################################
+class QBasicListSelector(QDialog):
+    """Basic list selection dialog"""
+
+    #----------------------------------------------------------------------#
+    def __init__(self, parent, label, itemList):
+        super().__init__(parent)
+        
+        self.listLabel = QLabel(label)
+        self.listWidget = QListWidget()
+        
+        #Create the layout and add the first label
+        vLay = QVBoxLayout()
+        vLay.setAlignment(Qt.AlignCenter)
+        vLay.addWidget(self.listLabel)
+
+        #Add the list widget
+        for item in itemList:
+            self.listWidget.addItem(item)
+        vLay.addWidget(self.listWidget)
+
+        #Create the button and place it in a horizontal box
+        hLay = QHBoxLayout()
+        okButton = QPushButton("Ok")
+        okButton.clicked.connect(self.closeDialog)
+        hLay.addStretch(1)
+        hLay.addWidget(okButton)
+        vLay.addLayout(hLay)
+
+        #Add the vertical layout
+        self.setLayout(vLay)
+
+        #Select the first item by default
+        self.listWidget.setCurrentItem(itemList[0])
+
+    #---------------------------------------------------------------------#
+    def closeDialog(self):
+        self.accept()
+
+    #---------------------------------------------------------------------#
+    def getSelected(self):
+        return self.listWidget.currentItem()
+        
         
 ####################################
 #Main function
