@@ -292,6 +292,7 @@ class QtPyPhotobooth(QObject):
         elif(msgType == self.gPhotoDelivery.StatusMessage.MSG_REQUEST_SUCCEEDED):
             print("Google Photos Delivery Mechanism Configured. Adding...")
             self.deliveryList.append(self.gPhotoDelivery)
+            self.gPhotoDelivery.messageReceived.disconnect(self.googlePhotosConfigCallback)
             self.__decrementSplashTriggerCount()
         else:
             print("Unknown error. Not Adding google photos to delivery list")
@@ -505,15 +506,15 @@ class QtPyPhotobooth(QObject):
         
         for method in self.deliveryList:
             print("Saving to " + method.getServiceName())
-            method.setUpdateHandler(self.updateHandler)
-            method.setCompleteHandler(self.completeHandler)
+            method.photoSaveUpdate.connect(self.updateHandler)
+            method.photoSaveComplete.connect(self.completeHandler)
             method.saveImage(self.resultImage)
         callback()
 
     #-----------------------------------------------------------------------#
     def updateHandler(self, serviceName, total, progress):
         """ Handle upload/save events from the delivery method"""
-        print("Update: " + serviceName + " - " + str(progress) + "/" + total)
+        print("Update: " + serviceName + " - " + str(progress) + "/" + str(total))
 
     #-----------------------------------------------------------------------#
     def completeHandler(self, serviceName, success):

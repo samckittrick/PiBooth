@@ -19,7 +19,7 @@ python3-lxml
 import GDataOauth2Client
 import pycurl
 from enum import Enum
-from io import BytesIO
+from io import BytesIO, IOBase
 from lxml import etree
 from lxml.etree import QName
 
@@ -141,7 +141,7 @@ class PicasaClient:
         print(url)
         headers = [
             "GData-Version: " + self.gDataVersion ]
-        if(self.token is not None):
+        if(token is not None):
             headers.append("Authorization: Bearer " + str(token.accessToken))
 
         buffer = BytesIO()
@@ -198,13 +198,19 @@ class PicasaClient:
             "Content-Type: multipart/related"
         ]
 
-        if self.token is not None:
+        if token is not None:
             headers.append("Authorization: Bearer " + str(token.accessToken))
 
         data = [
-            ( 'metadata', (pycurl.FORM_CONTENTS, xmlString, pycurl.FORM_CONTENTTYPE, 'application/atom+xml')),
-            ( 'file', (pycurl.FORM_FILE, photo, pycurl.FORM_CONTENTTYPE, "image/jpeg"))
+            ( 'metadata', (pycurl.FORM_CONTENTS, xmlString, pycurl.FORM_CONTENTTYPE, 'application/atom+xml'))
         ]
+
+
+        #Check to see if this is a filename or a file like object
+        if(isinstance(photo, IOBase)):
+            data.append(('file', (pycurl.FORM_BUFFERPTR, photo.getvalue(), pycurl.FORM_CONTENTTYPE, "image/jpeg")))
+        else:
+            data.append(('file', (pycurl.FORM_FILE, photo, pycurl.FORM_CONTENTTYPE, "image/jpeg")))
 
         #Send the file and get the response.
         url = self.picasaBaseURL + "/user/" + self.userId + "/albumid/" + albumId

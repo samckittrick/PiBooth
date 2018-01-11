@@ -22,9 +22,11 @@ from GDataOauth2Client import OAuth2Token as GDOAuth2Token
 from GDataOauth2Client import GDataOAuthError
 from GDataPicasaClient import PicasaClient, PicasaErrors
 from GDataPicasaClient import MessageTypes as PicasaMessageTypes
+from GDataPicasaClient import MetadataTags as GMetadataTags
 import json
 from pathlib import Path
 from enum import Enum
+from io import BytesIO
 
 ########################################################################
 # AbstractPhotoboothDelivery Class                                     #
@@ -32,6 +34,11 @@ from enum import Enum
 class AbstractPhotoboothDelivery(QObject):
     """Interface defining basic delivery mechanism functions. """
     __metaclass__ = ABCMeta
+
+    #PyQtSlots
+    photoSaveUpdate = pyqtSignal(str, int, int)
+    photoSaveComplete = pyqtSignal(str, bool)
+    
 
     #---------------------------------------------------------------------------#
     def __init__(self):
@@ -42,20 +49,6 @@ class AbstractPhotoboothDelivery(QObject):
     @abstractmethod
     def saveImage(self, image):
         """ Method to actually save an image. Takes a PIL Image object."""
-        pass
-
-    #---------------------------------------------------------------------------#
-    @abstractmethod
-    def setUpdateHandler(self, handler):
-        """Set the callback function for updates. The callback prototype should be:
-        def callback(serviceName, total, progress) """
-        pass
-
-    #--------------------------------------------------------------------------#
-    @abstractmethod
-    def setCompleteHandler(self, handler):
-        """Set the save complete handler. Callback prototype should be:
-        def callback(serviceName) """
         pass
 
     #--------------------------------------------------------------------------#
@@ -73,6 +66,7 @@ class LocalPhotoStorage(AbstractPhotoboothDelivery):
     #---------------------------------------------------------------------------#
     def __init__(self, storageLocation):
         """Set up the storage location"""
+        super().__init__()
         self.storageLocation = storageLocation
         self.completeHandler = None
         self.serviceName = "Local Storage"
@@ -100,8 +94,10 @@ class LocalPhotoStorage(AbstractPhotoboothDelivery):
         except:
             print("Error saving file")
 
-        if(self.completeHandler is not None):
-            self.completeHandler(self.serviceName, success)
+        if(success):
+            self.photoSaveComplete.emit(self.serviceName, True)
+        else:
+            self.photoSaveComplete.emit(self.serviceName, False)
         
 
     #---------------------------------------------------------------------------#
@@ -136,7 +132,7 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
 
     #PyQt Signals
     messageReceived = pyqtSignal(StatusMessage, object) 
-        
+    
     
     #---------------------------------------------------------------------------#
     def __init__(self, clientId, clientSecret, serializedToken,  imgSummary):
@@ -144,6 +140,8 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
 
         #Call the parent constructor
         super().__init__()
+
+        self.serviceName = "Google Photos"
         
         #Read in client credentials
         self.clientId = clientId
@@ -254,3 +252,46 @@ class GooglePhotoStorage(AbstractPhotoboothDelivery):
 
         #if we exit the loop, the requested id wasn't found
         return False
+
+    #-------------------------------------------------------------------------#
+    def getServiceName(self):
+        return self.serviceName
+
+    #-------------------------------------------------------------------------#
+    def saveImage(self, image):
+        """Upload the image to google photos"""
+
+        #create metadata
+        metadata = { GMetadataTags.TAG_SUMMARY: self.imgSummary,
+                     GMetadataTags.TAG_TITLE: self.generateCollisionResistantName(".jpg") }
+
+        #Save the image into memory
+        buffer = BytesIO()
+        image.save(buffer, format='jpeg')
+        buffer.seek(0)
+
+        self.uploadCall = lambda: self.picasaClient.uploadPhoto(buffer, metadata, self.albumId, self.token, self.uploadCallback)
+        #send the image
+        self.messageReceived.connect(self.uploadCallback)
+        self.uploadCall()
+        self.messageReceived.disconnect(self.uploadCallback)
+        
+    #-----------------------------------------------------------------------#
+    def uploadCallback(self, msgType, data):
+        if(msgType == PicasaMessageTypes.MSG_SUCCESS):
+            self.photoSaveComplete(self.getServiceName(), True)
+        elif(msgType == PicasaMessageTypes.MSG_FAILED):
+            if(data['error_type'] == PicasaErrors.ERR_UNAUTHORIZED):
+                print("Refresh token")
+                self.getAccessToken()
+            else:
+                self.photoSaveComplete(self.getServiceName(), False)
+        elif(msgType == PicasaMessageTypes.MSG_PROGRESS):
+            self.photoSaveUpdate.emit(self.getServiceName(), data['total'], data['progress'])
+        elif(msgType == self.StatusMessage.MSG_AUTH_SUCCESS):
+            self.uploadCall()
+
+    #-----------------------------------------------------------------------#
+    def generateCollisionResistantName(self, extension):
+        timestamp = int(math.floor(time.time()))
+        return "IMG_" + str(timestamp) + "." + extension
