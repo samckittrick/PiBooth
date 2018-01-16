@@ -434,8 +434,8 @@ class QtPyPhotobooth(QObject):
             self.templateModel.appendRow(item)
         
         self.templateView.setViewMode(QListView.IconMode)
-        self.templateView.setIconSize(QSize(150,150))
-        self.templateView.setUniformItemSizes(True)
+        self.templateView.setIconSize(QSize(200,200))
+        #self.templateView.setUniformItemSizes(True)
         self.templateView.setSpacing(50)
         self.templateView.setSelectionMode(QListView.SingleSelection)
         self.templateView.setEditTriggers(QListView.NoEditTriggers)
