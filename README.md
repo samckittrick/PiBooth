@@ -50,10 +50,10 @@ Use git to download the repository or download and unzip on the raspberry pi.
 `git clone https://github.com/samckittrick/Qt-Py-Photobooth.git`
 
 ### Configuration
-Qt-Py Photobooth reads a yaml configuration file called *config.yaml* in its current working directory. The default configuration file contained in the repo should have sufficient comment information to explain the different configuration options. 
+QtPy Photobooth reads a yaml configuration file called *config.yaml* in its current working directory. The default configuration file contained in the repo should have sufficient comment information to explain the different configuration options. 
 
 ### Photo Templates
-Qt-Py Photobooth supports configurable photo templates that allows you to provide a range of photo formats for the user to choose from. Templates are contained within their own directory in a configurable location.
+QtPy Photobooth supports configurable photo templates that allows you to provide a range of photo formats for the user to choose from. Templates are contained within their own directory in a configurable location.
 
 ```
 +----------------------+
@@ -94,3 +94,32 @@ Once the images are taken by the photobooth, the following steps are followed to
 
 ### Launching QtPy Photobooth
 `python3 QtPyPhotobooth.py`
+
+## Google Photos Integration
+
+QtPy Photobooth can be configured to upload photos to Google Photos as they are taken. The following instructions describe how to set up Google Photos to allow this application to upload photos. Please note, you should probably still configure the LocalSave delivery mechanism so that photos are saved locally as well in case the network connection goes wrong. 
+
+**Initial Configuration - Do Once**
+1. Log in to the Google Developers Console at console.google.com
+2. Create a new project and fill out the requisite details.
+3. On the project dashboard go to Credentials
+4. Create a new OAuth Client Id Credential Set
+5. In "Type" select "Other"
+6. Give the credentials a descriptive name and complete
+7. Download the credentials in JSON format and place in a location where QtPY Photobooth can access them.
+8. Follow the example in the config.yaml to configure the Google Photos Delivery Mechanism
+
+**Connecting QtPy Photobooth and Google Photos - Do One or more times**
+1. Launch QtPy Photobooth
+2. Photobooth will begin OAuth process and display an authorization code
+3. Enter authorization code at google.com/device
+4. Follow the prompts to authorize the photobooth
+5. Photobooth will save the resultant token in the cache location.
+6. This process should only need to be done once unless the token is deleted or moved. 
+
+**Selecting an Album - Do on Every Launch**
+1. Photobooth will pop up dialog showing list of albums
+2. Select album
+3. Press ok.
+
+Your photobooth can now upload photos to Google Photos
