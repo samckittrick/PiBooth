@@ -39,10 +39,10 @@ class AbstractPhotoboothCamera:
         self.imgList = list()
 
     #-----------------------------------------------------------#
-    def capturePhotos(self, numPhotos, callback):
+    def capturePhotos(self, reqPhotoList, callback):
         """Step through the state machine
         Parameters:
-        numPhotos - The number of photos to take
+        reqPhotoList - A list of (width,height) tuples representing the photos to take 
         callback - A callable that takes a list as the argument"""
         self.resetState()
         while True:
@@ -63,13 +63,15 @@ class AbstractPhotoboothCamera:
                 #if we are displaying a result image
                 else:
                     #if wehave enough images
-                    if(len(self.imgList) >= numPhotos):
+                    if(len(self.imgList) >= len(reqPhotoList)):
                         self.removeOverlay()
                         break
                     #otherwise take another
                     else:
                         self.currentCountdown = self.countDownLength
                         self.displayImage = False
+                        #set the resolution of the next image
+                        self.setCaptureResolution(reqPhotoList[len(self.imgList)])
             time.sleep(1)
         #return the list of images
         callback(self.imgList)

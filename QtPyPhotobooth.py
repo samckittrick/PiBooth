@@ -459,13 +459,14 @@ class QtPyPhotobooth(QObject):
         print("Template Selected: " + templateIndex.data())
         template = templateIndex.data(Qt.UserRole)
         self.selectedTemplate = template
-        numPhotos = len(template.photoList)
-        print("Number of photos to take: " + str(numPhotos))
+        requestedPhotos = list()
+        for p in template.photoList:
+            requestedPhotos.append((p['width'],p['height']))
 
         #Configure and start the camera
-        self.camera.setCaptureResolution(self.selectedTemplate.getMaxImageSize())
+        self.camera.setCaptureResolution(requestedPhotos[0])
         self.camera.start_preview()
-        thread = threading.Thread(target=self.camera.capturePhotos, args=(numPhotos, self.onPhotosTaken))
+        thread = threading.Thread(target=self.camera.capturePhotos, args=(requestedPhotos, self.onPhotosTaken))
         thread.start()
         self.processor = ImageProcessor(self.selectedTemplate)
 
