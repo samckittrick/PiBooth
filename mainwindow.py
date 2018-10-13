@@ -5,7 +5,7 @@ By: Scott McKittrick
 Dependencies:
 
 Classes Contained:
-
+ - MainGuiWindow
 """
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -46,7 +46,30 @@ class MainGuiWindow:
         self.logoLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.splash_gridLayout.addWidget(self.logoLabel, 0,0,1,1)
         return self.splashPage
-                                                                                                                                                    
+
+    #-----------------------------------------------------------#
+    def getTemplateScreen(self):
+        """Generate the template page."""
+        self.templatePage = QtWidgets.QWidget()
+        self.templatePage.setObjectName("templatePage")
+        template_gridLayout = QGridLayout(self.templatePage)
+        template_gridLayout.setContentsMargins(11,11,11,11)
+        
+        self.templateView = QtWidgets.QListView()
+        self.templateView.setViewMode(QtWidgets.QListView.IconMode)
+        self.templateView.setObjectName("templateView")
+        template_gridLayout.addWidget(self.templateView, 1, 0, 1, 1)
+
+        self.templateSelectLabel = QtWidgets.QLabel()
+        font = QtGui.QFont()
+        font.setPointSize(27)
+        self.templateSelectLabel.setFont(font)
+        self.templateSelectLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.templateSelectLabel.setText("Please Select a Template")
+        template_gridLayout.addWidget(self.templateSelectLabel, 0, 0, 1, 1)
+
+        return self.templatePage
+    
     #-----------------------------------------------------------#
     def initUI(self):
         """Initialize the UI Window. """
@@ -68,6 +91,9 @@ class MainGuiWindow:
 
         #Add the splash screen
         self.stackedWidget.addWidget(self.getSplashScreen())
+
+        #add the template listing
+        self.stackedWidget.addWidget(self.getTemplateScreen())
 
         #add the stacked widget to the window
         self.mainWindow.setCentralWidget(self.stackedWidget)
