@@ -69,6 +69,14 @@ class MainGuiWindow:
         template_gridLayout.addWidget(self.templateSelectLabel, 0, 0, 1, 1)
 
         return self.templatePage
+
+    #-----------------------------------------------------------#
+    def getPreviewPage(self):
+        self.previewPage = QtWidgets.QWidget()
+        self.previewPage.setObjectName("previewPage")
+
+        #We leave this one blank for picamera since it writes directly to the screen
+        return self.previewPage
     
     #-----------------------------------------------------------#
     def initUI(self):
@@ -94,6 +102,9 @@ class MainGuiWindow:
 
         #add the template listing
         self.stackedWidget.addWidget(self.getTemplateScreen())
+
+        #add the preview page
+        self.stackedWidget.addWidget(self.getPreviewPage())
 
         #add the stacked widget to the window
         self.mainWindow.setCentralWidget(self.stackedWidget)
