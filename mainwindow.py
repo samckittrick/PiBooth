@@ -52,13 +52,13 @@ class MainGuiWindow:
         """Generate the template page."""
         self.templatePage = QtWidgets.QWidget()
         self.templatePage.setObjectName("templatePage")
-        template_gridLayout = QGridLayout(self.templatePage)
-        template_gridLayout.setContentsMargins(11,11,11,11)
+        self.template_gridLayout = QGridLayout(self.templatePage)
+        self.template_gridLayout.setContentsMargins(11,11,11,11)
         
         self.templateView = QtWidgets.QListView()
         self.templateView.setViewMode(QtWidgets.QListView.IconMode)
         self.templateView.setObjectName("templateView")
-        template_gridLayout.addWidget(self.templateView, 1, 0, 1, 1)
+        self.template_gridLayout.addWidget(self.templateView, 1, 0, 1, 1)
 
         self.templateSelectLabel = QtWidgets.QLabel()
         font = QtGui.QFont()
@@ -66,7 +66,7 @@ class MainGuiWindow:
         self.templateSelectLabel.setFont(font)
         self.templateSelectLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.templateSelectLabel.setText("Please Select a Template")
-        template_gridLayout.addWidget(self.templateSelectLabel, 0, 0, 1, 1)
+        self.template_gridLayout.addWidget(self.templateSelectLabel, 0, 0, 1, 1)
 
         return self.templatePage
 
@@ -77,6 +77,29 @@ class MainGuiWindow:
 
         #We leave this one blank for picamera since it writes directly to the screen
         return self.previewPage
+
+    #-----------------------------------------------------------#
+    def getResultsPage(self):
+        self.templatePage2 = QtWidgets.QWidget()
+        self.templatePage2.setObjectName("templatePage")
+        self.template_gridLayout2 = QGridLayout(self.templatePage2)
+        self.template_gridLayout2.setContentsMargins(11,11,11,11)
+        
+        self.templateView2 = QtWidgets.QListView()
+        self.templateView2.setViewMode(QtWidgets.QListView.IconMode)
+        self.templateView2.setObjectName("templateView")
+        self.template_gridLayout2.addWidget(self.templateView2, 1, 0, 1, 1)
+        
+        self.templateSelectLabel2 = QtWidgets.QLabel()
+        font = QtGui.QFont()
+        font.setPointSize(27)
+        self.templateSelectLabel2.setFont(font)
+        self.templateSelectLabel2.setAlignment(QtCore.Qt.AlignCenter)
+        self.templateSelectLabel2.setText("Please Select a Template")
+        self.template_gridLayout2.addWidget(self.templateSelectLabel2, 0, 0, 1, 1)
+        
+        return self.templatePage2
+                                                                                                                                    
     
     #-----------------------------------------------------------#
     def initUI(self):
@@ -105,6 +128,9 @@ class MainGuiWindow:
 
         #add the preview page
         self.stackedWidget.addWidget(self.getPreviewPage())
+
+        #add the results page
+        self.stackedWidget.addWidget(self.getResultsPage())
 
         #add the stacked widget to the window
         self.mainWindow.setCentralWidget(self.stackedWidget)

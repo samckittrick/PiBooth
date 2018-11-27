@@ -443,7 +443,7 @@ class QtPyPhotobooth(QObject):
         #Move to the processing page.
         self.camera.end_preview()
         self.resultImage = self.processor.processImages(photoList)
-        self.configureResultScreen()
+        #self.configureResultScreen()
         self.__changeScreens(QtPyPhotobooth.Screens.RESULT)
         
 
